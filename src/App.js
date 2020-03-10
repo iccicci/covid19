@@ -138,31 +138,39 @@ class App extends Component {
 		this.setState(presets[event.target.value]);
 	}
 
-	handleInputChange(event) {
+	handleCheckBox(event) {
 		const target = event.target;
-		const value = target.type === "checkbox" ? target.checked : target.value;
 		const name = target.name;
+		const value = target.checked;
 
-		this.setState({
-			[name]: value
-		});
+		this.setState({ [name]: value });
+	}
+
+	handleRegion(event) {
+		this.setState({ region: event.target.value });
 	}
 
 	render() {
+		if(! prociv[0]) return <div className="App" />;
+
+		const region = this.state.region;
+		const optionItems = Object.keys(prociv).map(region => (
+			<option key={region} value={region}>
+				{prociv[region].name}
+			</option>
+		));
 		const options = {
 			axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
-			title: { fontSize: 20, text: "Italia" },
+			title: { fontSize: 20, text: prociv[region].name },
 			data:  []
 		};
-
-		if(! prociv[0]) return <div className="App" />;
 
 		for(let s in stats) {
 			if(this.state[s]) {
 				const dataPoints = [];
 
-				for(let i in prociv[0].data) {
-					const d = prociv[0].data[i];
+				for(let i in prociv[region].data) {
+					const d = prociv[region].data[i];
 
 					dataPoints.push({ x: day2date[i], y: d[s] });
 				}
@@ -180,44 +188,48 @@ class App extends Component {
 								<tr>
 									<td>
 										<label>
-											<input type="checkbox" name="healed" checked={this.state.healed} onChange={this.handleInputChange.bind(this)} /> healed (dimessi guariti)
+											<input type="checkbox" name="healed" checked={this.state.healed} onChange={this.handleCheckBox.bind(this)} /> healed (dimessi guariti)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="home_isolation" checked={this.state.home_isolation} onChange={this.handleInputChange.bind(this)} /> home isolation (isolamento domiciliare)
+											<input type="checkbox" name="home_isolation" checked={this.state.home_isolation} onChange={this.handleCheckBox.bind(this)} /> home isolation (isolamento domiciliare)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="intensive" checked={this.state.intensive} onChange={this.handleInputChange.bind(this)} /> intensive care (terapia intensiva)
+											<input type="checkbox" name="intensive" checked={this.state.intensive} onChange={this.handleCheckBox.bind(this)} /> intensive care (terapia intensiva)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="symptoms" checked={this.state.symptoms} onChange={this.handleInputChange.bind(this)} /> hospitalized with symptoms (ricoverati con sintomi)
+											<input type="checkbox" name="symptoms" checked={this.state.symptoms} onChange={this.handleCheckBox.bind(this)} /> hospitalized with symptoms (ricoverati con sintomi)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="hospitalized" checked={this.state.hospitalized} onChange={this.handleInputChange.bind(this)} /> hospitalized (totale ospedalizzati)
+											<input type="checkbox" name="hospitalized" checked={this.state.hospitalized} onChange={this.handleCheckBox.bind(this)} /> hospitalized (totale ospedalizzati)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="positives" checked={this.state.positives} onChange={this.handleInputChange.bind(this)} /> positives (totale attualmente positivi)
+											<input type="checkbox" name="positives" checked={this.state.positives} onChange={this.handleCheckBox.bind(this)} /> positives (totale attualmente positivi)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="new_positives" checked={this.state.new_positives} onChange={this.handleInputChange.bind(this)} /> new positives (nuovi attualmente positivi)
+											<input type="checkbox" name="new_positives" checked={this.state.new_positives} onChange={this.handleCheckBox.bind(this)} /> new positives (nuovi attualmente positivi)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="cases" checked={this.state.cases} onChange={this.handleInputChange.bind(this)} /> cases (totale casi)
+											<input type="checkbox" name="cases" checked={this.state.cases} onChange={this.handleCheckBox.bind(this)} /> cases (totale casi)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="deceased" checked={this.state.deceased} onChange={this.handleInputChange.bind(this)} /> deceased (deceduti)
+											<input type="checkbox" name="deceased" checked={this.state.deceased} onChange={this.handleCheckBox.bind(this)} /> deceased (deceduti)
 										</label>
 										<br />
 										<label>
-											<input type="checkbox" name="tests" checked={this.state.tests} onChange={this.handleInputChange.bind(this)} /> tests (tamponi)
+											<input type="checkbox" name="tests" checked={this.state.tests} onChange={this.handleCheckBox.bind(this)} /> tests (tamponi)
 										</label>
+										<br />
+										<select value={this.state.region} onChange={this.handleRegion.bind(this)}>
+											{optionItems}
+										</select>
 									</td>
 									<td align="center">
 										<input type="button" value="all" onClick={this.handleButton.bind(this)} />
