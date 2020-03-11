@@ -109,11 +109,12 @@ class App extends Component {
 								totale_ospedalizzati
 							} = e;
 							const day = data.substr(0, 10);
+							let code = codice_regione;
 
-							if(denominazione_regione === "Bolzano") return null;
-							if(! prociv[codice_regione]) prociv[codice_regione] = { code: codice_regione, data: {}, name: denominazione_regione };
+							if(denominazione_regione === "Bolzano") code = 21;
+							if(! prociv[code]) prociv[code] = { code, data: {}, name: denominazione_regione };
 
-							prociv[codice_regione].data[date2day[day]] = {
+							prociv[code].data[date2day[day]] = {
 								cases:          totale_casi,
 								deceased:       deceduti,
 								healed:         dimessi_guariti,
