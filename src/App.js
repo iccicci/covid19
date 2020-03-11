@@ -29,6 +29,23 @@ const stats = {
 	tests:          { color: "pink", legend: "tests" }
 };
 
+const state2par = {
+	cases:          "c",
+	deceased:       "d",
+	healed:         "h",
+	home_isolation: "a",
+	hospitalized:   "b",
+	intensive:      "i",
+	new_positives:  "n",
+	positives:      "p",
+	region:         "r",
+	symptoms:       "s",
+	tests:          "t"
+};
+const par2state = {};
+
+for(let i in state2par) par2state[state2par[i]] = i;
+
 class App extends Component {
 	constructor() {
 		super();
@@ -48,6 +65,19 @@ class App extends Component {
 	}
 
 	componentDidMount() {
+		const { hash, origin } = window.location;
+
+		this.origin = origin + "/#";
+
+		if(hash) {
+			const par = Object.fromEntries(new URLSearchParams(hash.substr(1)));
+			const state = {};
+
+			for(let i in par2state) if(i in par) state[par2state[i]] = i === "r" ? parseInt(par[i], 10) : par[i] === "1";
+
+			this.setState(state);
+		}
+
 		// https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json
 
 		fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
@@ -180,6 +210,12 @@ class App extends Component {
 			}
 		}
 
+		const par = {};
+
+		for(let i in state2par) par[state2par[i]] = i === "region" ? this.state.region : this.state[i] ? 1 : 0;
+
+		window.history.pushState({}, null, this.origin + new URLSearchParams(par).toString());
+
 		return (
 			<div className="App">
 				<header>
@@ -263,6 +299,11 @@ class App extends Component {
 						by (a cura di):{" "}
 						<a href="https://www.trinityteam.it/DanieleRicci#en" target="_blank" rel="noopener noreferrer">
 							Daniele Ricci
+						</a>
+						<br />
+						source code &amp; issue report on (sorgente e segnalazione errori su):{" "}
+						<a href="https://github.com/iccicci/covid19" target="_blank" rel="noopener noreferrer">
+							GitHub
 						</a>
 						<br />
 						data source (fonte dati):{" "}
