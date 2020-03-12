@@ -3,6 +3,37 @@
 	text-align: justify;
 }
 
+.DisabledOption,
+.EnabledOption {
+	background-color: transparent;
+	border: none;
+	cursor: pointer;
+	display: inline;
+	margin: 0;
+	margin-left: 3px;
+	padding: 0;
+	text-decoration: underline;
+}
+
+.DisabledOption:focus,
+.EnabledOption:focus {
+	outline: none;
+}
+
+.DisabledOption:hover,
+.EnabledOption:hover {
+	outline: none;
+	text-decoration: none;
+}
+
+.DisabledOption {
+	color: gray;
+}
+
+.EnabledOption {
+	color: blue;
+}
+
 a {
 	color: blue;
 }
@@ -16,7 +47,7 @@ header {
 	color: black;
 	display: flex;
 	flex-direction: column;
-	font-size: 16px;
+	font-size: 14px;
 }
 
 footer {

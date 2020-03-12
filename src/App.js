@@ -6,61 +6,75 @@ var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 
 const date2day = {};
 const day2date = {};
-const prociv = {};
+const prociv = [];
 
-const presets = {
-	all:          { cases: true, deceased: true, healed: true, home_isolation: true, hospitalized: true, intensive: true, new_positives: true, positives: true, symptoms: true, tests: false },
-	positives:    { cases: false, deceased: false, healed: false, home_isolation: true, hospitalized: true, intensive: true, new_positives: false, positives: true, symptoms: true, tests: false },
-	hospitalized: { cases: false, deceased: false, healed: false, home_isolation: false, hospitalized: true, intensive: true, new_positives: false, positives: false, symptoms: true, tests: false },
-	tests:        { cases: false, deceased: false, healed: false, home_isolation: false, hospitalized: false, intensive: false, new_positives: false, positives: false, symptoms: false, tests: true },
-	gross:        { cases: true, deceased: true, healed: true, home_isolation: false, hospitalized: false, intensive: false, new_positives: true, positives: false, symptoms: false, tests: false }
+const groups = {
+	none: {
+		desc:  { e: "none", i: "nessuno" },
+		state: { cases: false, deceased: false, healed: false, home: false, hospitalized: false, intensive: false, new: false, positives: false, symptoms: false, tests: false }
+	},
+	all: {
+		desc:  { e: "all", i: "tutti" },
+		state: { cases: true, deceased: true, healed: true, home: true, hospitalized: true, intensive: true, new: true, positives: true, symptoms: true, tests: false }
+	},
+	positives: {
+		desc:  { e: "positives", i: "positivi" },
+		state: { cases: false, deceased: false, healed: false, home: true, hospitalized: true, intensive: true, new: false, positives: true, symptoms: true, tests: false }
+	},
+	hospitalized: {
+		desc:  { e: "hospitalized", i: "ospedalizzati" },
+		state: { cases: false, deceased: false, healed: false, home: false, hospitalized: true, intensive: true, new: false, positives: false, symptoms: true, tests: false }
+	},
+	gross: {
+		desc:  { e: "gross", i: "totali" },
+		state: { cases: true, deceased: true, healed: true, home: false, hospitalized: false, intensive: false, new: true, positives: false, symptoms: false, tests: false }
+	},
+	tests: {
+		desc:  { e: "tests", i: "tamponi" },
+		state: { cases: false, deceased: false, healed: false, home: false, hospitalized: false, intensive: false, new: false, positives: false, symptoms: false, tests: true }
+	}
 };
 
 const stats = {
-	cases:          { color: "red", legend: "cases" },
-	deceased:       { color: "black", legend: "deceased" },
-	healed:         { color: "green", legend: "healed" },
-	home_isolation: { color: "orange", legend: "home isolation" },
-	hospitalized:   { color: "brown", legend: "hospitalized" },
-	intensive:      { color: "grey", legend: "intensive care" },
-	new_positives:  { color: "blue", legend: "new positives" },
-	positives:      { color: "purple", legend: "positives" },
-	symptoms:       { color: "magenta", legend: "symptoms" },
-	tests:          { color: "pink", legend: "tests" }
+	healed:       { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, param: "h" },
+	home:         { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, param: "a" },
+	symptoms:     { color: "magenta", desc: { e: "hospitalized with symptoms", i: "ricoverati con sintomi" }, legend: { e: "symptoms", i: "sintomi" }, param: "s" },
+	intensive:    { color: "grey", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, param: "i" },
+	hospitalized: { color: "brown", desc: { e: "gross hospitalized", i: "totale ospedalizzati" }, legend: { e: "hospitalized", i: "ospedalizzati" }, param: "b" },
+	positives:    { color: "purple", desc: { e: "gross currently positives", i: "totale attualmente positivi" }, legend: { e: "positives", i: "positivi" }, param: "p" },
+	new:          { color: "blue", desc: { e: "new currently positives", i: "nuovi attualmente positivi" }, legend: { e: "new", i: "nuovi" }, param: "n" },
+	cases:        { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, param: "c" },
+	deceased:     { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, param: "d" },
+	tests:        { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, param: "t" }
 };
+const par2state = { l: "language", r: "region" };
 
-const state2par = {
-	cases:          "c",
-	deceased:       "d",
-	healed:         "h",
-	home_isolation: "a",
-	hospitalized:   "b",
-	intensive:      "i",
-	new_positives:  "n",
-	positives:      "p",
-	region:         "r",
-	symptoms:       "s",
-	tests:          "t"
-};
-const par2state = {};
+Object.entries(stats).map(([stat, value]) => (par2state[value.param] = stat));
 
-for(let i in state2par) par2state[state2par[i]] = i;
+function Option(props) {
+	return (
+		<button className={props.enabled ? "EnabledOption" : "DisabledOption"} onClick={props.onClick}>
+			{props.short}
+		</button>
+	);
+}
 
 class App extends Component {
 	constructor() {
 		super();
 		this.state = {
-			cases:          true,
-			deceased:       true,
-			healed:         true,
-			home_isolation: true,
-			hospitalized:   true,
-			intensive:      true,
-			new_positives:  true,
-			positives:      true,
-			region:         0,
-			symptoms:       true,
-			tests:          false
+			cases:        true,
+			deceased:     true,
+			healed:       true,
+			home:         true,
+			hospitalized: true,
+			intensive:    true,
+			language:     "i",
+			new:          true,
+			positives:    true,
+			region:       0,
+			symptoms:     true,
+			tests:        false
 		};
 	}
 
@@ -73,7 +87,7 @@ class App extends Component {
 			const par = Object.fromEntries(new URLSearchParams(hash.substr(1)));
 			const state = {};
 
-			for(let i in par2state) if(i in par) state[par2state[i]] = i === "r" ? parseInt(par[i], 10) : par[i] === "1";
+			for(let i in par2state) if(i in par) state[par2state[i]] = i === "l" ? par[i] : i === "r" ? parseInt(par[i], 10) : par[i] === "1";
 
 			this.setState(state);
 		}
@@ -104,16 +118,16 @@ class App extends Component {
 					date2day[day] = i;
 					day2date[i] = new Date(day);
 					prociv[0].data[i] = {
-						cases:          totale_casi,
-						deceased:       deceduti,
-						healed:         dimessi_guariti,
-						home_isolation: isolamento_domiciliare,
-						hospitalized:   totale_ospedalizzati,
-						intensive:      terapia_intensiva,
-						new_positives:  nuovi_attualmente_positivi,
-						positives:      totale_attualmente_positivi,
-						symptoms:       ricoverati_con_sintomi,
-						tests:          tamponi
+						cases:        totale_casi,
+						deceased:     deceduti,
+						healed:       dimessi_guariti,
+						home:         isolamento_domiciliare,
+						hospitalized: totale_ospedalizzati,
+						intensive:    terapia_intensiva,
+						new:          nuovi_attualmente_positivi,
+						positives:    totale_attualmente_positivi,
+						symptoms:     ricoverati_con_sintomi,
+						tests:        tamponi
 					};
 
 					return null;
@@ -141,20 +155,20 @@ class App extends Component {
 							const day = data.substr(0, 10);
 							let code = codice_regione;
 
-							if(denominazione_regione === "Bolzano") code = 21;
+							if(denominazione_regione === "P.A. Bolzano") code = 21;
 							if(! prociv[code]) prociv[code] = { code, data: {}, name: denominazione_regione };
 
 							prociv[code].data[date2day[day]] = {
-								cases:          totale_casi,
-								deceased:       deceduti,
-								healed:         dimessi_guariti,
-								home_isolation: isolamento_domiciliare,
-								hospitalized:   totale_ospedalizzati,
-								intensive:      terapia_intensiva,
-								new_positives:  nuovi_attualmente_positivi,
-								positives:      totale_attualmente_positivi,
-								symptoms:       ricoverati_con_sintomi,
-								tests:          tamponi
+								cases:        totale_casi,
+								deceased:     deceduti,
+								healed:       dimessi_guariti,
+								home:         isolamento_domiciliare,
+								hospitalized: totale_ospedalizzati,
+								intensive:    terapia_intensiva,
+								new:          nuovi_attualmente_positivi,
+								positives:    totale_attualmente_positivi,
+								symptoms:     ricoverati_con_sintomi,
+								tests:        tamponi
 							};
 
 							return null;
@@ -165,31 +179,17 @@ class App extends Component {
 			});
 	}
 
-	handleButton(event) {
-		this.setState(presets[event.target.value]);
-	}
-
-	handleCheckBox(event) {
-		const target = event.target;
-		const name = target.name;
-		const value = target.checked;
-
-		this.setState({ [name]: value });
-	}
-
-	handleRegion(event) {
-		this.setState({ region: event.target.value });
-	}
-
 	render() {
 		if(! prociv[0]) return <div className="App" />;
 
 		const region = this.state.region;
-		const optionItems = Object.keys(prociv).map(region => (
-			<option key={region} value={region}>
-				{prociv[region].name}
-			</option>
-		));
+		const optionItems = [...prociv]
+			.sort((a, b) => (a.code === 0 ? -1 : b.code === 0 ? 1 : a.name < b.name ? -1 : 1))
+			.map(region => (
+				<option key={region.code} value={region.code}>
+					{region.name}
+				</option>
+			));
 		const options = {
 			axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
 			title: { fontSize: 20, text: prociv[region].name },
@@ -206,113 +206,60 @@ class App extends Component {
 					dataPoints.push({ x: day2date[i], y: d[s] });
 				}
 
-				options.data.push({ color: stats[s].color, dataPoints, legendText: stats[s].legend, markerType: "circle", showInLegend: true, type: "line" });
+				options.data.push({ color: stats[s].color, dataPoints, legendText: stats[s].legend[this.state.language], markerType: "circle", showInLegend: true, type: "line" });
 			}
 		}
 
-		const par = {};
+		const par = { l: this.state.language, r: this.state.region };
 
-		for(let i in state2par) par[state2par[i]] = i === "region" ? this.state.region : this.state[i] ? 1 : 0;
-
+		Object.entries(stats).map(([stat, value]) => (par[value.param] = this.state[stat] ? 1 : 0));
 		window.history.pushState({}, null, this.origin + new URLSearchParams(par).toString());
 
 		return (
 			<div className="App">
 				<header>
-					<form>
-						<table>
-							<tbody>
-								<tr>
-									<td>
-										<label>
-											<input type="checkbox" name="healed" checked={this.state.healed} onChange={this.handleCheckBox.bind(this)} /> healed (dimessi guariti)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="home_isolation" checked={this.state.home_isolation} onChange={this.handleCheckBox.bind(this)} /> home isolation (isolamento domiciliare)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="intensive" checked={this.state.intensive} onChange={this.handleCheckBox.bind(this)} /> intensive care (terapia intensiva)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="symptoms" checked={this.state.symptoms} onChange={this.handleCheckBox.bind(this)} /> hospitalized with symptoms (ricoverati con sintomi)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="hospitalized" checked={this.state.hospitalized} onChange={this.handleCheckBox.bind(this)} /> hospitalized (totale ospedalizzati)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="positives" checked={this.state.positives} onChange={this.handleCheckBox.bind(this)} /> positives (totale attualmente positivi)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="new_positives" checked={this.state.new_positives} onChange={this.handleCheckBox.bind(this)} /> new positives (nuovi attualmente positivi)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="cases" checked={this.state.cases} onChange={this.handleCheckBox.bind(this)} /> cases (totale casi)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="deceased" checked={this.state.deceased} onChange={this.handleCheckBox.bind(this)} /> deceased (deceduti)
-										</label>
-										<br />
-										<label>
-											<input type="checkbox" name="tests" checked={this.state.tests} onChange={this.handleCheckBox.bind(this)} /> tests (tamponi)
-										</label>
-										<br />
-										<select value={this.state.region} onChange={this.handleRegion.bind(this)}>
-											{optionItems}
-										</select>
-									</td>
-									<td align="center">
-										<input type="button" value="all" onClick={this.handleButton.bind(this)} />
-										<br />
-										<br />
-										<input type="button" value="positives" onClick={this.handleButton.bind(this)} />
-										<br />
-										<br />
-										<input type="button" value="hospitalized" onClick={this.handleButton.bind(this)} />
-										<br />
-										<br />
-										<input type="button" value="gross" onClick={this.handleButton.bind(this)} />
-										<br />
-										<br />
-										<input type="button" value="tests" onClick={this.handleButton.bind(this)} />
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</form>
+					<p>
+						{this.state.language === "i" ? "lingua" : "language"}:
+						<Option enabled={this.state.language === "e"} short="English" onClick={() => this.setState({ language: "e" })} />
+						<Option enabled={this.state.language === "i"} short="Italiano" onClick={() => this.setState({ language: "i" })} />
+					</p>
+					<p>
+						trends:
+						{Object.entries(stats).map(([stat, value]) => (
+							<Option enabled={this.state[stat]} key={stat} short={value.desc[this.state.language]} onClick={() => this.setState({ [stat]: ! this.state[stat] })} />
+						))}
+					</p>
+					<p>
+						{this.state.language === "i" ? "gruppi" : "groups"}:
+						{Object.entries(groups).map(([group, value]) => (
+							<Option enabled={true} key={group} short={value.desc[this.state.language]} onClick={() => this.setState(value.state)} />
+						))}
+					</p>
+					<p>
+						{this.state.language === "i" ? "regione: " : "region: "}
+						<select value={this.state.region} onChange={event => this.setState({ region: event.target.value })}>
+							{optionItems}
+						</select>
+					</p>
 					<div>
-						<CanvasJSChart
-							options={options}
-							/* onRef = {ref => this.chart = ref} */
-						/>
+						<CanvasJSChart options={options} />
 					</div>
 				</header>
 				<footer>
 					<p>
-						by (a cura di):{" "}
+						{this.state.language === "i" ? "a cura di" : "by"}:{" "}
 						<a href="https://www.trinityteam.it/DanieleRicci#en" target="_blank" rel="noopener noreferrer">
 							Daniele Ricci
 						</a>
 						<br />
-						source code &amp; issue report on (sorgente e segnalazione errori su):{" "}
+						{this.state.language === "i" ? "codice sorgente e segnalazione errori su" : "source code and issue report on"}:{" "}
 						<a href="https://github.com/iccicci/covid19" target="_blank" rel="noopener noreferrer">
 							GitHub
 						</a>
 						<br />
-						data source (fonte dati):{" "}
+						{this.state.language === "i" ? "fonte dati" : "data source"}:{" "}
 						<a href="https://github.com/pcm-dpc/COVID-19/blob/master/README.md" target="_blank" rel="noopener noreferrer">
 							Protezione Civile
-						</a>{" "}
-						- charts (grafici):{" "}
-						<a href="https://canvasjs.com/" target="_blank" rel="noopener noreferrer">
-							canvasJS
 						</a>
 					</p>
 				</footer>
