@@ -11,9 +11,9 @@ export const stats = {
 	h: { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, source: "dimessi_guariti", param: "h" },
 	a: { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, source: "isolamento_domiciliare", param: "a" },
 	s: { color: "magenta", desc: { e: "hospitalized with symptoms", i: "ricoverati con sintomi" }, legend: { e: "symptoms", i: "sintomi" }, source: "ricoverati_con_sintomi", param: "s" },
-	i: { color: "grey", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, source: "terapia_intensiva", param: "i" },
+	i: { color: "purple", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, source: "terapia_intensiva", param: "i" },
 	b: { color: "brown", desc: { e: "gross hospitalized", i: "totale ospedalizzati" }, legend: { e: "hospitalized", i: "ospedalizzati" }, source: "totale_ospedalizzati", param: "b" },
-	p: { color: "purple", desc: { e: "gross currently positives", i: "totale attualmente positivi" }, legend: { e: "positives", i: "positivi" }, source: "totale_attualmente_positivi", param: "p" },
+	p: { color: "violet", desc: { e: "gross currently positives", i: "totale attualmente positivi" }, legend: { e: "positives", i: "positivi" }, source: "totale_attualmente_positivi", param: "p" },
 	n: { color: "blue", desc: { e: "new currently positives", i: "nuovi attualmente positivi" }, legend: { e: "new", i: "nuovi" }, source: "nuovi_attualmente_positivi", param: "n" },
 	c: { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, source: "totale_casi", param: "c" },
 	d: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, source: "deceduti", param: "d" },
@@ -25,7 +25,7 @@ export const day2date = [];
 export const prociv = [];
 
 let i = 0;
-let missing = 8;
+let missing = 7;
 let today = new Date();
 
 while(missing) {
@@ -38,7 +38,6 @@ while(missing) {
 	i++;
 	if(date > today) missing--;
 }
-
 
 function fromSource(source) {
 	const code = source.codice_regione ? (source.denominazione_regione === "P.A. Bolzano" ? 21 : source.codice_regione) : 0;
@@ -68,7 +67,7 @@ export function refresh(done) {
 						return (prociv[code].data[date2day[e.data.substr(0, 10)]] = data);
 					});
 
-					setTimeout(() => refresh(done), 60000);
+					setTimeout(() => refresh(done), 600000);
 					done();
 				});
 		});
