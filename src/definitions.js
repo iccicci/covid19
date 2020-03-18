@@ -50,6 +50,8 @@ function fromSource(source) {
 
 // https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json
 export function refresh(done) {
+	setTimeout(() => refresh(done), 600000);
+
 	fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
 		.then(res => res.json())
 		.then(res => {
@@ -67,7 +69,6 @@ export function refresh(done) {
 						return (prociv[code].data[date2day[e.data.substr(0, 10)]] = data);
 					});
 
-					setTimeout(() => refresh(done), 600000);
 					done();
 				});
 		});

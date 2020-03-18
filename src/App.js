@@ -30,7 +30,9 @@ function Forecast(props) {
 	return (
 		<div>
 			<p>
-				<br /><br /><br />
+				<br />
+				<br />
+				<br />
 				<select value={forecast.r} onChange={event => refresh({ ...forecast, r: event.target.value })}>
 					{parent.optionItems}
 				</select>
@@ -105,7 +107,7 @@ class App extends Component {
 					.map((e, i) => ({ ...e, color: colors[i] }))
 					.reverse(),
 				{ color: stats[s].color, dataPoints: data.map(e => ({ x: day2date[e[0]], y: e[1] })), legendText: stats[s].legend[l ? l : this.state.l] }
-			].map(e => ({ ...e, markerType: "circle", showInLegend: true, type: "line" }))
+			].map(e => ({ ...e, markerSize: 8, markerType: "circle", showInLegend: true, type: "line" }))
 		};
 	}
 
@@ -152,6 +154,7 @@ class App extends Component {
 					color:        value.color,
 					dataPoints:   prociv[r].data.map((e, i) => ({ x: day2date[i], y: e[stat] })).filter((e, i) => i > 5),
 					legendText:   value.legend[l],
+					markerSize:   8,
 					markerType:   "circle",
 					showInLegend: true,
 					type:         "line"
