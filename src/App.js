@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
-import { day2date, groups, prociv, refresh, stats } from "./definitions";
+import { day2date, groups, prociv, procivc, refresh, stats } from "./definitions";
 import regression from "regression";
 import "./App.css";
 
@@ -10,6 +10,9 @@ function Forecast(props) {
 	const { i, l, parent } = props;
 	const { f } = parent.state;
 	const forecast = f[i];
+	let { r, s, w } = forecast;
+
+	if(! s) s = "c";
 
 	const refresh = forecast => {
 		const forecasts = [...f];
@@ -33,11 +36,19 @@ function Forecast(props) {
 				<br />
 				<br />
 				<br />
-				<select value={forecast.r} onChange={event => refresh({ ...forecast, r: event.target.value })}>
-					{parent.optionItems}
+				<select value={r} onChange={event => refresh({ r: parseInt(event.target.value, 10), s })}>
+					{parent.regionsItems}
 				</select>
+				{r ? " " : ""}
+				{r ? (
+					<select value={w} onChange={event => refresh({ r, w: parseInt(event.target.value, 10) })}>
+						{parent.citiesItems[r]}
+					</select>
+				) : (
+					""
+				)}
 				{Object.entries(stats).map(([stat, value]) => (
-					<Option enabled={stat === forecast.s} key={stat} desc={value.desc[l]} onClick={() => refresh({ ...forecast, s: stat })} />
+					<Option enabled={stat === s} key={stat} desc={value.desc[l]} onClick={() => (w ? null : refresh({ r, s: stat }))} />
 				))}
 			</p>
 			<div>
@@ -59,10 +70,11 @@ function Option(props) {
 class App extends Component {
 	constructor() {
 		super();
+		this.citiesItems = [];
 		this.forecasts = [];
 		this.last = 0;
-		this.optionItems = [];
-		this.state = { ...groups.all.state, f: [], l: "i", r: 0 };
+		this.regionsItems = [];
+		this.state = { ...groups.all.state, f: [], l: "i", r: 0, w: 0 };
 	}
 
 	addForecast() {
@@ -73,9 +85,12 @@ class App extends Component {
 	}
 
 	calculateForecast(forecast, l) {
-		const { r, s } = forecast;
+		let { r, s, w } = forecast;
+
+		if(! s) s = "c";
+
 		const colors = ["#000000", "#505050", "#a0a0a0"];
-		const data = prociv[r].data.map((e, i) => [i, e[s]]).filter((e, i) => i > 5);
+		const data = (w ? procivc[r][w].data.map((e, i) => [i, e[s]]) : prociv[r].data.map((e, i) => [i, e[s]])).filter((e, i) => i > 5);
 		const ita = (l ? l : this.state.l) === "i";
 
 		return {
@@ -127,13 +142,32 @@ class App extends Component {
 		}
 
 		refresh(() => {
-			this.optionItems = [...prociv]
+			this.regionsItems = [...prociv]
 				.sort((a, b) => (a.code === 0 ? -1 : b.code === 0 ? 1 : a.name < b.name ? -1 : 1))
 				.map(region => (
 					<option key={region.code} value={region.code}>
 						{region.name}
 					</option>
 				));
+
+			this.citiesItems = [];
+			procivc.map(
+				(e, i) =>
+					(this.citiesItems[i] = [
+						<option key={0} value={0}>
+							-
+						</option>,
+						...[...e]
+							.sort((a, b) => (a.name < b.name ? -1 : 1))
+							.filter(e => e)
+							.map(city => (
+								<option key={city.city} value={city.city}>
+									{city.name}
+								</option>
+							))
+					])
+			);
+
 			this.last = prociv[0].data.lastIndexOf(prociv[0].data.slice(-1)[0]);
 			this.calculateForecasts();
 			this.setState({});
@@ -143,22 +177,29 @@ class App extends Component {
 	render() {
 		if(! prociv[0]) return <div className="App" />;
 
-		const { f, l, r } = this.state;
+		const { f, l, r, w } = this.state;
 
+		const common = { markerSize: 8, markerType: "circle", showInLegend: true, type: "line" };
 		const options = {
 			axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
 			title: { fontSize: 18, text: prociv[r].name },
-			data:  Object.entries(stats)
-				.filter(([stat, value]) => this.state[stat])
-				.map(([stat, value]) => ({
-					color:        value.color,
-					dataPoints:   prociv[r].data.map((e, i) => ({ x: day2date[i], y: e[stat] })).filter((e, i) => i > 5),
-					legendText:   value.legend[l],
-					markerSize:   8,
-					markerType:   "circle",
-					showInLegend: true,
-					type:         "line"
-				}))
+			data:  w
+				? Object.entries(stats)
+					.filter(([stat, value]) => stat === "c")
+					.map(([stat, value]) => ({
+						...common,
+						color:      value.color,
+						dataPoints: procivc[r][w].data.map((e, i) => ({ x: day2date[i], y: e[stat] })).filter((e, i) => i > 5),
+						legendText: value.legend[l]
+					}))
+				: Object.entries(stats)
+					.filter(([stat, value]) => this.state[stat])
+					.map(([stat, value]) => ({
+						...common,
+						color:      value.color,
+						dataPoints: prociv[r].data.map((e, i) => ({ x: day2date[i], y: e[stat] })).filter((e, i) => i > 5),
+						legendText: value.legend[l]
+					}))
 		};
 
 		window.history.pushState({}, null, this.origin + compressToBase64(JSON.stringify(this.state)));
@@ -188,20 +229,28 @@ class App extends Component {
 					<p>
 						trends:
 						{Object.entries(stats).map(([stat, value]) => (
-							<Option enabled={this.state[stat]} key={stat} desc={value.desc[l]} onClick={() => this.setState({ [stat]: this.state[stat] ? 0 : 1 })} />
+							<Option enabled={stat === "c" && w ? true : this.state[stat] && ! w} key={stat} desc={value.desc[l]} onClick={() => (w ? null : this.setState({ [stat]: this.state[stat] ? 0 : 1 }))} />
 						))}
 					</p>
 					<p>
 						{l === "i" ? "gruppi" : "groups"}:
 						{Object.entries(groups).map(([group, value]) => (
-							<Option enabled={true} key={group} desc={value.desc[l]} onClick={() => this.setState(value.state)} />
+							<Option enabled={! w} key={group} desc={value.desc[l]} onClick={() => (w ? null : this.setState(value.state))} />
 						))}
 					</p>
 					<p>
 						{l === "i" ? "regione: " : "region: "}
-						<select value={r} onChange={event => this.setState({ r: event.target.value })}>
-							{this.optionItems}
+						<select value={r} onChange={event => this.setState({ r: parseInt(event.target.value, 10), w: 0 })}>
+							{this.regionsItems}
 						</select>
+						{r ? (l === "i" ? " provincia: " : " city: ") : ""}
+						{r ? (
+							<select value={w} onChange={event => this.setState({ w: parseInt(event.target.value, 10) })}>
+								{this.citiesItems[r]}
+							</select>
+						) : (
+							""
+						)}
 					</p>
 					<div>
 						<CanvasJSReact.CanvasJSChart options={options} />

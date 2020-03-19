@@ -8,21 +8,22 @@ export const groups = {
 };
 
 export const stats = {
-	h: { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, source: "dimessi_guariti", param: "h" },
-	a: { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, source: "isolamento_domiciliare", param: "a" },
-	s: { color: "magenta", desc: { e: "hospitalized with symptoms", i: "ricoverati con sintomi" }, legend: { e: "symptoms", i: "sintomi" }, source: "ricoverati_con_sintomi", param: "s" },
-	i: { color: "purple", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, source: "terapia_intensiva", param: "i" },
-	b: { color: "brown", desc: { e: "gross hospitalized", i: "totale ospedalizzati" }, legend: { e: "hospitalized", i: "ospedalizzati" }, source: "totale_ospedalizzati", param: "b" },
-	p: { color: "violet", desc: { e: "gross currently positives", i: "totale attualmente positivi" }, legend: { e: "positives", i: "positivi" }, source: "totale_attualmente_positivi", param: "p" },
-	n: { color: "blue", desc: { e: "new currently positives", i: "nuovi attualmente positivi" }, legend: { e: "new", i: "nuovi" }, source: "nuovi_attualmente_positivi", param: "n" },
-	c: { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, source: "totale_casi", param: "c" },
-	d: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, source: "deceduti", param: "d" },
-	t: { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi", param: "t" }
+	h: { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, source: "dimessi_guariti" },
+	a: { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, source: "isolamento_domiciliare" },
+	s: { color: "magenta", desc: { e: "hospitalized with symptoms", i: "ricoverati con sintomi" }, legend: { e: "symptoms", i: "sintomi" }, source: "ricoverati_con_sintomi" },
+	i: { color: "purple", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, source: "terapia_intensiva" },
+	b: { color: "brown", desc: { e: "gross hospitalized", i: "totale ospedalizzati" }, legend: { e: "hospitalized", i: "ospedalizzati" }, source: "totale_ospedalizzati" },
+	p: { color: "violet", desc: { e: "gross currently positives", i: "totale attualmente positivi" }, legend: { e: "positives", i: "positivi" }, source: "totale_attualmente_positivi" },
+	n: { color: "blue", desc: { e: "new currently positives", i: "nuovi attualmente positivi" }, legend: { e: "new", i: "nuovi" }, source: "nuovi_attualmente_positivi" },
+	c: { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, source: "totale_casi" },
+	d: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, source: "deceduti" },
+	t: { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi" }
 };
 
 export const date2day = {};
 export const day2date = [];
 export const prociv = [];
+export const procivc = [];
 
 let i = 0;
 let missing = 7;
@@ -39,16 +40,25 @@ while(missing) {
 	if(date > today) missing--;
 }
 
-function fromSource(source) {
+function fromSource(source, city) {
 	const code = source.codice_regione ? (source.denominazione_regione === "P.A. Bolzano" ? 21 : source.codice_regione) : 0;
 	const data = {};
+	const name = city ? `${source.denominazione_provincia} (${source.sigla_provincia})` : source.denominazione_regione ? source.denominazione_regione : "Italia";
+	const ret = { code, data, name };
 
-	Object.entries(stats).map(([stat, value]) => (data[stat] = source[value.source]));
+	Object.entries(stats).map(([stat, value]) => {
+		const s = source[value.source];
 
-	return { code, data, name: source.denominazione_regione ? source.denominazione_regione : "Italia" };
+		if(s !== undefined) data[stat] = s;
+
+		return null;
+	});
+
+	if(city) ret.city = source.codice_provincia;
+
+	return ret;
 }
 
-// https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json
 export function refresh(done) {
 	setTimeout(() => refresh(done), 600000);
 
@@ -69,7 +79,22 @@ export function refresh(done) {
 						return (prociv[code].data[date2day[e.data.substr(0, 10)]] = data);
 					});
 
-					done();
+					fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json")
+						.then(res => res.json())
+						.then(res => {
+							res.map(e => {
+								if(! e.sigla_provincia) return 0;
+
+								const { city, code, data, name } = fromSource(e, true);
+
+								if(! procivc[code]) procivc[code] = [];
+								if(! procivc[code][city]) procivc[code][city] = { city, data: [], name };
+
+								return (procivc[code][city].data[date2day[e.data.substr(0, 10)]] = data);
+							});
+
+							done();
+						});
 				});
 		});
 }
