@@ -95,7 +95,7 @@ class App extends Component {
 
 		return {
 			axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
-			title: { fontSize: 18, text: prociv[r].name },
+			title: { fontSize: 18, text: w ? procivc[r][w].name : prociv[r].name },
 			data:  [
 				...[
 					{ filter: () => 1, func: "linear", legend: ita ? "lineare" : "linear", order: {} },
