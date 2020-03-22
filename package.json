@@ -3,6 +3,8 @@
 	"version": "0.0.1",
 	"private": false,
 	"dependencies": {
+		"math-erf": "1.0.0",
+		"ml-matrix": "6.4.1",
 		"react": "16.13.0",
 		"react-dom": "16.13.0",
 		"react-scripts": "3.4.0",
@@ -13,6 +15,8 @@
 		"eslint": "6.8.0",
 		"prettier": "1.19.1"
 	},
+	"licence": "MIT",
+	"repository": "https://github.com/iccicci/covid19.git",
 	"scripts": {
 		"start": "react-scripts start",
 		"build": "react-scripts build",

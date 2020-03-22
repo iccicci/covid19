@@ -8,15 +8,15 @@ export const groups = {
 };
 
 export const stats = {
-	h: { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, source: "dimessi_guariti" },
-	a: { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, source: "isolamento_domiciliare" },
-	s: { color: "magenta", desc: { e: "hospitalized with symptoms", i: "ricoverati con sintomi" }, legend: { e: "symptoms", i: "sintomi" }, source: "ricoverati_con_sintomi" },
-	i: { color: "purple", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, source: "terapia_intensiva" },
-	b: { color: "brown", desc: { e: "gross hospitalized", i: "totale ospedalizzati" }, legend: { e: "hospitalized", i: "ospedalizzati" }, source: "totale_ospedalizzati" },
-	p: { color: "violet", desc: { e: "gross currently positives", i: "totale attualmente positivi" }, legend: { e: "positives", i: "positivi" }, source: "totale_attualmente_positivi" },
-	n: { color: "blue", desc: { e: "new currently positives", i: "nuovi attualmente positivi" }, legend: { e: "new", i: "nuovi" }, source: "nuovi_attualmente_positivi" },
-	c: { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, source: "totale_casi" },
-	d: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, source: "deceduti" },
+	h: { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, model: "integral", source: "dimessi_guariti" },
+	a: { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, model: "gauss", source: "isolamento_domiciliare" },
+	s: { color: "magenta", desc: { e: "hospitalized with symptoms", i: "ricoverati con sintomi" }, legend: { e: "symptoms", i: "sintomi" }, model: "gauss", source: "ricoverati_con_sintomi" },
+	i: { color: "purple", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, model: "gauss", source: "terapia_intensiva" },
+	b: { color: "brown", desc: { e: "gross hospitalized", i: "totale ospedalizzati" }, legend: { e: "hospitalized", i: "ospedalizzati" }, model: "gauss", source: "totale_ospedalizzati" },
+	p: { color: "violet", desc: { e: "gross currently positives", i: "totale attualmente positivi" }, legend: { e: "positives", i: "positivi" }, model: "gauss", source: "totale_attualmente_positivi" },
+	n: { color: "blue", desc: { e: "new currently positives", i: "nuovi attualmente positivi" }, legend: { e: "new", i: "nuovi" }, model: "derivate", source: "nuovi_attualmente_positivi" },
+	c: { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, model: "integral", source: "totale_casi" },
+	d: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, model: "integral", source: "deceduti" },
 	t: { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi" }
 };
 
@@ -38,6 +38,19 @@ while(missing) {
 
 	i++;
 	if(date > today) missing--;
+}
+
+export function fill(max) {
+	if(day2date[max]) return day2date[max];
+
+	const prev = fill(max - 1);
+	const date = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1, 3);
+	const day = date.toISOString().substr(0, 10);
+
+	date2day[day] = max;
+	day2date[max] = date;
+
+	return date;
 }
 
 function fromSource(source, city) {
