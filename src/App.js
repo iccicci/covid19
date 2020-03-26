@@ -1,10 +1,21 @@
 import React, { Component } from "react";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
 import { day2date, groups, prociv, procivc, refresh, stats } from "./definitions";
+import { gauss, gauss2 } from "./gauss";
 import regression from "regression";
 import "./App.css";
 
 import CanvasJSReact from "./canvasjs.react";
+
+function regressions(ita) {
+	return [
+		{ filter: () => 1, func: "linear", legend: ita ? "lineare" : "linear", order: {} },
+		{ filter: e => e[1], func: "exponential", legend: ita ? "esponenziale" : "exponential", order: {} },
+		{ filter: e => e[1], func: "power", legend: ita ? "potenza" : "power", order: {} },
+		{ filter: () => 1, func: "polynomial", legend: ita ? "polinomiale 2°" : "polynomial 2rd", order: { order: 2 } },
+		{ filter: () => 1, func: "polynomial", legend: ita ? "polinomiale 3°" : "polynomial 3rd", order: { order: 3 } }
+	];
+}
 
 function Forecast(props) {
 	const { i, l, parent } = props;
@@ -93,36 +104,53 @@ class App extends Component {
 		const data = (w ? procivc[r][w].data.map((e, i) => [i, e[s]]) : prociv[r].data.map((e, i) => [i, e[s]])).filter((e, i) => i > 5);
 		const ita = (l ? l : this.state.l) === "i";
 
+		let flines;
+
+		if(s === "cc" && r === 0) {
+			try {
+				flines = gauss2(ita);
+			} catch(e) {
+				console.log(e);
+			}
+		} else if(stats[s].model) {
+			try {
+				if(s === "a" && r === 2) throw new Error("Exclude home Aosta");
+				if(s === "s" && r === 17) throw new Error("Exclude symptoms Basilicata");
+				if(w === 59) throw new Error("Exclude Latina");
+				if(w === 80) throw new Error("Exclude Reggio Calabria");
+				flines = gauss(data, stats[s].model, ita);
+			} catch(e) {
+				console.log(e);
+			}
+		}
+
+		if(! flines) {
+			flines = regressions(ita)
+				.map(f => {
+					const res = regression[f.func](data.filter(f.filter), { ...f.order, precision: 3 });
+					const { equation, points, predict, r2 } = res;
+
+					for(let i = 1; i <= 7; ++i) points.push(predict(this.last + i));
+
+					return { legendText: `${f.legend} ${f.func === "power" ? equation[1] : ""} r2: ${r2}`, dataPoints: points.map(e => ({ x: day2date[e[0]], y: e[1] })), r2 };
+				})
+				.filter(e => ! isNaN(e.r2) && e.r2 > 0)
+				.sort((a, b) => (a.r2 < b.r2 ? 1 : -1))
+				.filter((e, i) => i < 3)
+				.map((e, i) => ({ ...e, color: colors[i] }))
+				.reverse();
+		}
+
 		return {
 			axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
 			title: { fontSize: 18, text: w ? procivc[r][w].name : prociv[r].name },
-			data:  [
-				...[
-					{ filter: () => 1, func: "linear", legend: ita ? "lineare" : "linear", order: {} },
-					{ filter: e => e[1], func: "exponential", legend: ita ? "esponenziale" : "exponential", order: {} },
-					{ filter: e => e[1], func: "power", legend: ita ? "potenza" : "power", order: {} },
-					{ filter: () => 1, func: "polynomial", legend: ita ? "polinomiale 2°" : "polynomial 2rd", order: { order: 2 } },
-					{ filter: () => 1, func: "polynomial", legend: ita ? "polinomiale 3°" : "polynomial 3rd", order: { order: 3 } }
-				]
-					.map(f => {
-						const res = regression[f.func](data.filter(f.filter), { ...f.order, precision: 3 });
-						const { equation, points, predict, r2 } = res;
-						let i = this.last + 1;
-
-						while(day2date[i]) {
-							points.push(predict(i));
-							++i;
-						}
-
-						return { legendText: `${f.legend} ${f.func === "power" ? equation[1] : ""} r2: ${r2}`, dataPoints: points.map(e => ({ x: day2date[e[0]], y: e[1] })), r2 };
-					})
-					.filter(e => ! isNaN(e.r2) && e.r2 > 0)
-					.sort((a, b) => (a.r2 < b.r2 ? 1 : -1))
-					.filter((e, i) => i < 3)
-					.map((e, i) => ({ ...e, color: colors[i] }))
-					.reverse(),
-				{ color: stats[s].color, dataPoints: data.map(e => ({ x: day2date[e[0]], y: e[1] })), legendText: stats[s].legend[l ? l : this.state.l] }
-			].map(e => ({ ...e, markerSize: 8, markerType: "circle", showInLegend: true, type: "line" }))
+			data:  [...flines, { color: stats[s].color, dataPoints: data.map(e => ({ x: day2date[e[0]], y: e[1] })), legendText: stats[s].legend[l ? l : this.state.l] }].map(e => ({
+				...e,
+				markerSize:   8,
+				markerType:   "circle",
+				showInLegend: true,
+				type:         "line"
+			}))
 		};
 	}
 
