@@ -75,6 +75,8 @@ export function gauss(data, model, ita) {
 	let Srp = 1e20;
 	let Sr2p = 1e20;
 
+	console.log("data", data);
+
 	const rows = data.length;
 	const cols = beta.length;
 
@@ -183,6 +185,13 @@ export function gauss2(ita) {
 
 	console.log("lines", lines);
 
+	//lines.c.beta = [5835.86718389771, 35.49198051859061, 9.839026388422745, 72249.91328194283];
+	//lines.d.beta = [793.492725536609, 38.22902426656094, 9.371610992335139, 9314.43392498987];
+	//lines.h.beta = [967.1909508825153, 38.48008062398988, 9.640194366150224, 11739.187989254617];
+	//lines.p.beta = [78836.02556879247, 44.96390454109033, 11.492699545279464];
+
+	//lines.h.beta = [4573.184326086097, 53.727936901024584, 10.900830977780688, 63696.486927000944];
+
 	base.forEach(s => (beta = [...beta, ...lines[s].beta]));
 
 	for(let step = 0; step < steps; ++step) {
@@ -199,6 +208,8 @@ export function gauss2(ita) {
 
 			if(tmax > tMax) tMax = tmax;
 		});
+
+		//fs[step].h = t => fs[Step].c(t) - fs[Step].d(t) - fs[Step].p(t);
 
 		/*
 		Object.entries(functions)
@@ -245,7 +256,7 @@ export function gauss2(ita) {
 				base.forEach(colS => {
 					const colL = lines[colS];
 
-					for(let j = 0; j < colL.beta.length; ++j) row.push(rowL === colL ? d[colS][j](t[i]) : 0);
+					for(let j = 0; j < colL.beta.length; ++j) row.push((rowL === colL ? 1 : 0) * d[colS][j](t[i]));
 				});
 
 				Jrjs.push(row);
@@ -282,7 +293,7 @@ export function gauss2(ita) {
 
 	for(let step = 1; step < steps; ++step) {
 		// eslint-disable-next-line no-loop-func
-		Object.keys(functions).forEach(s => {
+		all.forEach(s => {
 			const dataPoints = [];
 			let f = fs[step][s];
 
@@ -302,6 +313,15 @@ export function gauss2(ita) {
 			legendText: stats[s].legend.i
 		})
 	);
+
+	/*
+	const data = [];
+	for(let t = 6; t <= tMax; ++t) data.push([t, fs[7].h(t)]);
+	console.log("prova", data);
+	try {
+		gauss(data, "integral", ita);
+	} catch(e) {}
+	*/
 
 	return ret;
 }
