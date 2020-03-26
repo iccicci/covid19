@@ -49,7 +49,7 @@ const models = {
 		beta0: data => {
 			const ret = guess(data);
 
-			return [ret[0] / 10, ret[1], ret[2], ret[0] * 2];
+			return [ret[0] / 10, ret[1], ret[2], ret[0]];
 		},
 		d: [
 			([, b, c]) => t => SQRTPI2 * c * erf((b - t) / (SQRT2 * c)),
@@ -122,10 +122,14 @@ export function gauss(data, model, ita) {
 		const Beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(Jr).mmul(r));
 
 		beta = Beta.data.map(e => e[0]);
+
+		if(beta[1] < 0) throw new Error("Negative peak");
+		if(beta[1] > 1000) throw new Error("Lost peak");
 	}
 
 	fill(tMax);
 
+	/*
 	for(let s = 0; s < rounds; ++s) {
 		const dataPoints = [];
 		let f = fs[s];
@@ -134,6 +138,14 @@ export function gauss(data, model, ita) {
 
 		ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}` });
 	}
+	*/
+
+	const dataPoints = [];
+	let f = fs[7];
+
+	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
+
+	ret.push({ color: colors[7], dataPoints, legendText: ita ? "proiezione" : "forecast" });
 
 	return ret;
 }
@@ -291,7 +303,7 @@ export function gauss2(ita) {
 	if(tMax > 100) tMax = 100;
 	fill(tMax);
 
-	for(let step = 1; step < steps; ++step) {
+	for(let step = 0; step < steps; ++step) {
 		// eslint-disable-next-line no-loop-func
 		all.forEach(s => {
 			const dataPoints = [];

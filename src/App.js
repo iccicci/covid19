@@ -106,7 +106,7 @@ class App extends Component {
 
 		let flines;
 
-		if(s === "c" && r === 0) {
+		if(s === "cc" && r === 0) {
 			try {
 				flines = gauss2(ita);
 			} catch(e) {
@@ -114,6 +114,10 @@ class App extends Component {
 			}
 		} else if(stats[s].model) {
 			try {
+				if(s === "a" && r === 2) throw new Error("Exclude home Aosta");
+				if(s === "s" && r === 17) throw new Error("Exclude symptoms Basilicata");
+				if(w === 59) throw new Error("Exclude Latina");
+				if(w === 80) throw new Error("Exclude Reggio Calabria");
 				flines = gauss(data, stats[s].model, ita);
 			} catch(e) {
 				console.log(e);
