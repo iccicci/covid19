@@ -4,6 +4,7 @@
 	"private": false,
 	"dependencies": {
 		"math-erf": "1.0.0",
+		"mathjs": "6.6.1",
 		"ml-matrix": "6.4.1",
 		"react": "16.13.0",
 		"react-dom": "16.13.0",

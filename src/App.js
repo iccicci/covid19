@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
 import { day2date, groups, prociv, procivc, refresh, stats } from "./definitions";
-import { gauss } from "./gauss";
+import { gauss, gauss2 } from "./gauss";
 import regression from "regression";
 import "./App.css";
 
@@ -106,10 +106,18 @@ class App extends Component {
 
 		let flines;
 
-		if(stats[s].model) {
+		if(s === "c" && r === 0) {
+			try {
+				flines = gauss2(ita);
+			} catch(e) {
+				console.log(e);
+			}
+		} else if(stats[s].model) {
 			try {
 				flines = gauss(data, stats[s].model, ita);
-			} catch(e) {}
+			} catch(e) {
+				console.log(e);
+			}
 		}
 
 		if(! flines) {
