@@ -197,9 +197,14 @@ class App extends Component {
 					])
 			);
 
-			this.last = prociv[0].data.lastIndexOf(prociv[0].data.slice(-1)[0]);
-			this.calculateForecasts();
-			this.setState({});
+			const last = prociv[0].data.lastIndexOf(prociv[0].data.slice(-1)[0]);
+
+			if(last !== this.last) {
+				this.last = last;
+				this.calculateForecasts();
+				this.setState({});
+				if(this.refs.advanced) this.refs.advanced.forecast(this.state.r);
+			}
 		});
 	}
 
@@ -235,7 +240,7 @@ class App extends Component {
 
 		return (
 			<div className="App">
-				<header>
+				<header id="head">
 					<p>
 						{l === "i" ? "lingua" : "language"}:
 						<Option
@@ -265,12 +270,10 @@ class App extends Component {
 							</select>
 						) : null}
 						{l === "i" ? "  -  visualizzazione" : "  -  view"}:
-						<Option enabled={! v} desc={l === "i" ? "classica" : "classical"} onClick={() => this.setState({ v: null })} />
-						<Option enabled={v} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.setState({ v: { r: 0 } })} />
+						<Option enabled={! v} desc={l === "i" ? "classica" : "classical"} onClick={() => this.setState({ v: 0 })} />
+						<Option enabled={v} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.setState({ v: 1 })} />
 					</p>
-					{v ? (
-						<Advanced language={l} region={r} />
-					) : (
+					{v ? null : (
 						<div>
 							<p>
 								trends:
@@ -289,20 +292,28 @@ class App extends Component {
 									<Option enabled={! w} key={group} desc={value.desc[l]} onClick={() => (w ? null : this.setState(value.state))} />
 								))}
 							</p>
-							<div>
-								<CanvasJSReact.CanvasJSChart options={options} />
-							</div>
-							{f.map((e, i) => (
-								<Forecast key={i} i={i} l={l} parent={this} />
-							))}
-							<p>
-								<br />
-								<Option enabled={true} desc={l === "i" ? "aggiungi proiezione" : "add forecast"} onClick={() => this.addForecast()} />
-							</p>
 						</div>
 					)}
 				</header>
-				<footer>
+				{v ? (
+					<div>
+						<Advanced language={l} region={r} ref="advanced" />
+					</div>
+				) : (
+					<div>
+						<div>
+							<CanvasJSReact.CanvasJSChart options={options} />
+						</div>
+						{f.map((e, i) => (
+							<Forecast key={i} i={i} l={l} parent={this} />
+						))}
+						<p>
+							<br />
+							<Option enabled={true} desc={l === "i" ? "aggiungi proiezione" : "add forecast"} onClick={() => this.addForecast()} />
+						</p>
+					</div>
+				)}
+				<footer id="foot">
 					<p>
 						{l === "i" ? "a cura di: " : "by: "}
 						<a href="https://www.trinityteam.it/DanieleRicci#en" target="_blank" rel="noopener noreferrer">
