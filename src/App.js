@@ -6,6 +6,7 @@ import regression from "regression";
 import "./App.css";
 
 import CanvasJSReact from "./canvasjs.react";
+import Advanced from "./Advanced";
 
 function regressions(ita) {
 	return [
@@ -205,7 +206,7 @@ class App extends Component {
 	render() {
 		if(! prociv[0]) return <div className="App" />;
 
-		const { f, l, r, w } = this.state;
+		const { f, l, r, v, w } = this.state;
 
 		const common = { markerSize: 8, markerType: "circle", showInLegend: true, type: "line" };
 		const options = {
@@ -213,7 +214,7 @@ class App extends Component {
 			title: { fontSize: 18, text: prociv[r].name },
 			data:  w
 				? Object.entries(stats)
-					.filter(([stat, value]) => stat === "c")
+					.filter(([stat]) => stat === "c")
 					.map(([stat, value]) => ({
 						...common,
 						color:      value.color,
@@ -221,7 +222,7 @@ class App extends Component {
 						legendText: value.legend[l]
 					}))
 				: Object.entries(stats)
-					.filter(([stat, value]) => this.state[stat])
+					.filter(([stat]) => this.state[stat])
 					.map(([stat, value]) => ({
 						...common,
 						color:      value.color,
@@ -253,57 +254,65 @@ class App extends Component {
 								this.setState({ l: "i" });
 							}}
 						/>
-					</p>
-					<p>
-						trends:
-						{Object.entries(stats).map(([stat, value]) => (
-							<Option enabled={stat === "c" && w ? true : this.state[stat] && ! w} key={stat} desc={value.desc[l]} onClick={() => (w ? null : this.setState({ [stat]: this.state[stat] ? 0 : 1 }))} />
-						))}
-					</p>
-					<p>
-						{l === "i" ? "gruppi" : "groups"}:
-						{Object.entries(groups).map(([group, value]) => (
-							<Option enabled={! w} key={group} desc={value.desc[l]} onClick={() => (w ? null : this.setState(value.state))} />
-						))}
-					</p>
-					<p>
-						{l === "i" ? "regione: " : "region: "}
+						{l === "i" ? "  -  regione: " : "  -  region: "}
 						<select value={r} onChange={event => this.setState({ r: parseInt(event.target.value, 10), w: 0 })}>
 							{this.regionsItems}
 						</select>
-						{r ? (l === "i" ? " provincia: " : " city: ") : ""}
-						{r ? (
+						{r && ! v ? (l === "i" ? " provincia: " : " city: ") : ""}
+						{r && ! v ? (
 							<select value={w} onChange={event => this.setState({ w: parseInt(event.target.value, 10) })}>
 								{this.citiesItems[r]}
 							</select>
-						) : (
-							""
-						)}
+						) : null}
+						{l === "i" ? "  -  visualizzazione" : "  -  view"}:
+						<Option enabled={! v} desc={l === "i" ? "classica" : "classical"} onClick={() => this.setState({ v: null })} />
+						<Option enabled={v} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.setState({ v: { r: 0 } })} />
 					</p>
-					<div>
-						<CanvasJSReact.CanvasJSChart options={options} />
-					</div>
-					{f.map((e, i) => (
-						<Forecast key={i} i={i} l={l} parent={this} />
-					))}
-					<p>
-						<br />
-						<Option enabled={true} desc={l === "i" ? "aggiungi proiezione" : "add forecast"} onClick={() => this.addForecast()} />
-					</p>
+					{v ? (
+						<Advanced language={l} region={r} />
+					) : (
+						<div>
+							<p>
+								trends:
+								{Object.entries(stats).map(([stat, value]) => (
+									<Option
+										enabled={stat === "c" && w ? true : this.state[stat] && ! w}
+										key={stat}
+										desc={value.desc[l]}
+										onClick={() => (w ? null : this.setState({ [stat]: this.state[stat] ? 0 : 1 }))}
+									/>
+								))}
+							</p>
+							<p>
+								{l === "i" ? "gruppi" : "groups"}:
+								{Object.entries(groups).map(([group, value]) => (
+									<Option enabled={! w} key={group} desc={value.desc[l]} onClick={() => (w ? null : this.setState(value.state))} />
+								))}
+							</p>
+							<div>
+								<CanvasJSReact.CanvasJSChart options={options} />
+							</div>
+							{f.map((e, i) => (
+								<Forecast key={i} i={i} l={l} parent={this} />
+							))}
+							<p>
+								<br />
+								<Option enabled={true} desc={l === "i" ? "aggiungi proiezione" : "add forecast"} onClick={() => this.addForecast()} />
+							</p>
+						</div>
+					)}
 				</header>
 				<footer>
 					<p>
-						{l === "i" ? "a cura di" : "by"}:{" "}
+						{l === "i" ? "a cura di: " : "by: "}
 						<a href="https://www.trinityteam.it/DanieleRicci#en" target="_blank" rel="noopener noreferrer">
 							Daniele Ricci
 						</a>
-						<br />
-						{l === "i" ? "codice sorgente e segnalazione errori su" : "source code and issue report on"}:{" "}
+						{"  -  " + (l === "i" ? "codice sorgente e segnalazione errori su: " : "source code and issue report on: ")}
 						<a href="https://github.com/iccicci/covid19" target="_blank" rel="noopener noreferrer">
 							GitHub
 						</a>
-						<br />
-						{l === "i" ? "fonte dati" : "data source"}:{" "}
+						{"  -  " + (l === "i" ? "fonte dati: " : "data source: ")}
 						<a href="https://github.com/pcm-dpc/COVID-19/blob/master/README.md" target="_blank" rel="noopener noreferrer">
 							Protezione Civile
 						</a>
