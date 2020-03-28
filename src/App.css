@@ -35,6 +35,12 @@
 	color: blue;
 }
 
+.Error {
+	color: red;
+	font-size: 18px;
+	padding: 50px;
+}
+
 a {
 	color: blue;
 }

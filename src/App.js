@@ -1,22 +1,20 @@
 import React, { Component } from "react";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
-import { day2date, groups, prociv, procivc, refresh, stats } from "./definitions";
-import { gauss, gauss2 } from "./gauss";
+import { day2date, getData, groups, prociv, procivc, refresh, stats } from "./definitions";
+import {  gauss2, gaussChart } from "./gauss";
 import regression from "regression";
 import "./App.css";
 
 import CanvasJSReact from "./canvasjs.react";
 import Advanced from "./Advanced";
 
-function regressions(ita) {
-	return [
-		{ filter: () => 1, func: "linear", legend: ita ? "lineare" : "linear", order: {} },
-		{ filter: e => e[1], func: "exponential", legend: ita ? "esponenziale" : "exponential", order: {} },
-		{ filter: e => e[1], func: "power", legend: ita ? "potenza" : "power", order: {} },
-		{ filter: () => 1, func: "polynomial", legend: ita ? "polinomiale 2°" : "polynomial 2rd", order: { order: 2 } },
-		{ filter: () => 1, func: "polynomial", legend: ita ? "polinomiale 3°" : "polynomial 3rd", order: { order: 3 } }
-	];
-}
+const regressions = [
+	{ filter: () => 1, func: "linear", legend: { i: "lineare", e: "linear" }, order: {} },
+	{ filter: e => e[1], func: "exponential", legend: { i: "esponenziale", e: "exponential" }, order: {} },
+	{ filter: e => e[1], func: "power", legend: { i: "potenza", e: "power" }, order: {} },
+	{ filter: () => 1, func: "polynomial", legend: { i: "polinomiale 2°", e: "polynomial 2rd" }, order: { order: 2 } },
+	{ filter: () => 1, func: "polynomial", legend: { i: "polinomiale 3°", e: "polynomial 3rd" }, order: { order: 3 } }
+];
 
 function Forecast(props) {
 	const { i, l, parent } = props;
@@ -99,41 +97,37 @@ class App extends Component {
 	calculateForecast(forecast, l) {
 		let { r, s, w } = forecast;
 
+		if(! l) l = this.state.l;
 		if(! s) s = "c";
 
 		const colors = ["#000000", "#505050", "#a0a0a0"];
-		const data = (w ? procivc[r][w].data.map((e, i) => [i, e[s]]) : prociv[r].data.map((e, i) => [i, e[s]])).filter((e, i) => i > 5);
-		const ita = (l ? l : this.state.l) === "i";
+		const data = getData(s, r, w);
 
 		let flines;
 
 		if(s === "cc" && r === 0) {
 			try {
-				flines = gauss2(ita);
+				flines = gauss2();
 			} catch(e) {
 				console.log(e);
 			}
 		} else if(stats[s].model) {
 			try {
-				if(s === "a" && r === 2) throw new Error("Exclude home Aosta");
-				if(s === "s" && r === 17) throw new Error("Exclude symptoms Basilicata");
-				if(w === 59) throw new Error("Exclude Latina");
-				if(w === 80) throw new Error("Exclude Reggio Calabria");
-				flines = gauss(data, stats[s].model, ita);
+				flines = gaussChart(data, s, r, w, l);
 			} catch(e) {
 				console.log(e);
 			}
 		}
 
 		if(! flines) {
-			flines = regressions(ita)
+			flines = regressions
 				.map(f => {
 					const res = regression[f.func](data.filter(f.filter), { ...f.order, precision: 3 });
 					const { equation, points, predict, r2 } = res;
 
 					for(let i = 1; i <= 7; ++i) points.push(predict(this.last + i));
 
-					return { legendText: `${f.legend} ${f.func === "power" ? equation[1] : ""} r2: ${r2}`, dataPoints: points.map(e => ({ x: day2date[e[0]], y: e[1] })), r2 };
+					return { legendText: `${f.legend[l]} ${f.func === "power" ? equation[1] : ""} r2: ${r2}`, dataPoints: points.map(e => ({ x: day2date[e[0]], y: e[1] })), r2 };
 				})
 				.filter(e => ! isNaN(e.r2) && e.r2 > 0)
 				.sort((a, b) => (a.r2 < b.r2 ? 1 : -1))
@@ -157,6 +151,7 @@ class App extends Component {
 
 	calculateForecasts(l) {
 		this.forecasts = this.state.f.map(e => this.calculateForecast(e, l));
+		this.setState({ l });
 	}
 
 	componentDidMount() {
@@ -201,8 +196,7 @@ class App extends Component {
 
 			if(last !== this.last) {
 				this.last = last;
-				this.calculateForecasts();
-				this.setState({});
+				this.calculateForecasts(this.state.l);
 				if(this.refs.advanced) this.refs.advanced.forecast(this.state.r);
 			}
 		});
@@ -214,26 +208,16 @@ class App extends Component {
 		const { f, l, r, v, w } = this.state;
 
 		const common = { markerSize: 8, markerType: "circle", showInLegend: true, type: "line" };
+		const lines = Object.entries(stats).filter(w ? ([stat]) => stat === "c" : ([stat]) => this.state[stat]);
 		const options = {
 			axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
-			title: { fontSize: 18, text: prociv[r].name },
-			data:  w
-				? Object.entries(stats)
-					.filter(([stat]) => stat === "c")
-					.map(([stat, value]) => ({
-						...common,
-						color:      value.color,
-						dataPoints: procivc[r][w].data.map((e, i) => ({ x: day2date[i], y: e[stat] })).filter((e, i) => i > 5),
-						legendText: value.legend[l]
-					}))
-				: Object.entries(stats)
-					.filter(([stat]) => this.state[stat])
-					.map(([stat, value]) => ({
-						...common,
-						color:      value.color,
-						dataPoints: prociv[r].data.map((e, i) => ({ x: day2date[i], y: e[stat] })).filter((e, i) => i > 5),
-						legendText: value.legend[l]
-					}))
+			title: { fontSize: 18, text: w ? procivc[r][w].name : prociv[r].name },
+			data:  lines.map(([stat, value]) => ({
+				...common,
+				color:      value.color,
+				dataPoints: getData(stat, r, w).map(([x, y]) => ({ x: day2date[x], y })),
+				legendText: value.legend[l]
+			}))
 		};
 
 		window.history.pushState({}, null, this.origin + compressToBase64(JSON.stringify(this.state)));
@@ -243,22 +227,8 @@ class App extends Component {
 				<header id="head">
 					<p>
 						{l === "i" ? "lingua" : "language"}:
-						<Option
-							enabled={l === "e"}
-							desc="english"
-							onClick={() => {
-								this.calculateForecasts("e");
-								this.setState({ l: "e" });
-							}}
-						/>
-						<Option
-							enabled={l === "i"}
-							desc="italiano"
-							onClick={() => {
-								this.calculateForecasts("i");
-								this.setState({ l: "i" });
-							}}
-						/>
+						<Option enabled={l === "e"} desc="english" onClick={() => this.calculateForecasts("e")} />
+						<Option enabled={l === "i"} desc="italiano" onClick={() => this.calculateForecasts("i")} />
 						{l === "i" ? "  -  regione: " : "  -  region: "}
 						<select value={r} onChange={event => this.setState({ r: parseInt(event.target.value, 10), w: 0 })}>
 							{this.regionsItems}
