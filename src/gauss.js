@@ -62,20 +62,21 @@ const models = {
 	}
 };
 
-export function gauss(data, model, ita) {
-	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
+export function gauss(data, stat, region, city) {
+	if(stat === "a" && region === 2) throw new Error("Exclude home Aosta");
+	if(stat === "s" && region === 17) throw new Error("Exclude symptoms Basilicata");
+	if(city === 59) throw new Error("Exclude Latina");
+	if(city === 80) throw new Error("Exclude Reggio Calabria");
+
 	const fs = [];
-	const m = models[model];
-	const ret = [];
+	const m = models[stats[stat].model];
 	const rounds = 8;
 	const t = data.map(([t]) => t);
 
 	let beta = m.beta0(data);
 	let tMax = 0;
-	let Srp = 1e20;
-	let Sr2p = 1e20;
-
-	console.log("data", data);
+	//let Srp = 1e20;
+	//let Sr2p = 1e20;
 
 	const rows = data.length;
 	const cols = beta.length;
@@ -85,21 +86,20 @@ export function gauss(data, model, ita) {
 		const tmax = ceil(m.tMax(beta));
 
 		if(tmax > tMax) tMax = tmax;
-		if(tMax > 100) tMax = 100;
 		fs[s] = f;
 
 		const r = Matrix.columnVector(data.map(([t, y]) => y - f(t)));
 		const Jrjs = [];
-		const Sr = r.data.map(e => e[0]).reduce((t, e) => t + e, 0);
-		const Sr2 = r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0);
+		//const Sr = r.data.map(e => e[0]).reduce((t, e) => t + e, 0);
+		//const Sr2 = r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0);
 
-		console.log(`beta${s}`, beta);
-		console.log(`r${s}`, r);
-		console.log(`Sr${s}`, Sr, Srp - Sr);
-		console.log(`Sr2${s}`, Sr2, Sr2p - Sr2);
+		//console.log(`beta${s}`, beta);
+		//console.log(`r${s}`, r);
+		//console.log(`Sr${s}`, Sr, Srp - Sr);
+		//console.log(`Sr2${s}`, Sr2, Sr2p - Sr2);
 
-		Srp = Sr;
-		Sr2p = Sr2;
+		//Srp = Sr;
+		//Sr2p = Sr2;
 
 		if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
 
@@ -117,7 +117,7 @@ export function gauss(data, model, ita) {
 
 		const Jr = new Matrix(Jrjs);
 
-		console.log(`Jr${s}`, Jr);
+		//console.log(`Jr${s}`, Jr);
 
 		const Beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(Jr).mmul(r));
 
@@ -126,6 +126,14 @@ export function gauss(data, model, ita) {
 		if(beta[1] < 0) throw new Error("Negative peak");
 		if(beta[1] > 1000) throw new Error("Lost peak");
 	}
+
+	return { fs, tMax };
+}
+
+export function gaussChart(data, stat, region, city, language) {
+	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
+	const ret = [];
+	const { fs, tMax } = gauss(data, stat, region, city);
 
 	fill(tMax);
 
@@ -143,9 +151,9 @@ export function gauss(data, model, ita) {
 	const dataPoints = [];
 	let f = fs[7];
 
-	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
+	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: Math.round(f(t)) });
 
-	ret.push({ color: colors[7], dataPoints, legendText: ita ? "proiezione" : "forecast" });
+	ret.push({ color: colors[7], dataPoints, legendText: language === "i" ? "proiezione" : "forecast" });
 
 	return ret;
 }
@@ -170,7 +178,7 @@ const all = Object.keys(functions).sort();
 // prettier-ignore
 const base = Object.entries(functions).filter(([, fun]) => fun.model).map(e => e[0]).sort((a, b) => a < b);
 
-export function gauss2(ita) {
+export function gauss2() {
 	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
 	const fs = [];
 	const lines = {};
@@ -207,7 +215,7 @@ export function gauss2(ita) {
 	base.forEach(s => (beta = [...beta, ...lines[s].beta]));
 
 	for(let step = 0; step < steps; ++step) {
-		const Step = step;
+		//const Step = step;
 
 		fs[step] = {};
 
@@ -331,7 +339,7 @@ export function gauss2(ita) {
 	for(let t = 6; t <= tMax; ++t) data.push([t, fs[7].h(t)]);
 	console.log("prova", data);
 	try {
-		gauss(data, "integral", ita);
+		gauss(data, "integral");
 	} catch(e) {}
 	*/
 

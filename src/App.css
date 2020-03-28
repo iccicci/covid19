@@ -1,6 +1,7 @@
 .App {
-	margin: 20px;
+	margin: 10px;
 	text-align: justify;
+	font-size: 14px;
 }
 
 .DisabledOption,
@@ -34,6 +35,12 @@
 	color: blue;
 }
 
+.Error {
+	color: red;
+	font-size: 18px;
+	padding: 50px;
+}
+
 a {
 	color: blue;
 }
@@ -47,11 +54,9 @@ header {
 	color: black;
 	display: flex;
 	flex-direction: column;
-	font-size: 14px;
 }
 
 footer {
-	margin-top: 40px;
 	font-size: 12px;
 	text-align: center;
 	width: 100%;

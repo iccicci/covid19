@@ -40,6 +40,10 @@ while(missing) {
 	if(date > today) missing--;
 }
 
+export function getData(stat, region, city) {
+	return (city ? procivc[region][city].data.map((e, i) => [i, e[stat]]) : prociv[region].data.map((e, i) => [i, e[stat]])).filter((e, i) => i > 5);
+}
+
 export function fill(max) {
 	if(day2date[max]) return day2date[max];
 
