@@ -4,6 +4,12 @@
 	font-size: 14px;
 }
 
+.Content {
+	padding: 10px;
+	text-align: justify;
+	font-size: 14px;
+}
+
 .DisabledOption,
 .EnabledOption {
 	background-color: transparent;
@@ -39,6 +45,26 @@
 	color: red;
 	font-size: 18px;
 	padding: 50px;
+}
+
+.Header {
+	font-size: 26px;
+	padding: 15px;
+	padding-left: 80px;
+	background: #d0d0d0;
+}
+
+.Sticky {
+	position: fixed;
+	top: 0;
+	width: 100%;
+}
+
+.Welcome {
+	background-color: #f0f0f0;
+	font-size: 22px;
+	padding: 10px;
+	text-align: center;
 }
 
 a {
