@@ -55,6 +55,7 @@ class Advanced extends Component {
 
 	draw() {
 		const canvas = this.refs.canvas;
+		const { lines, tMax } = this;
 
 		if(! this.tMax) return;
 		if(! this.refs.canvas) return;
@@ -68,10 +69,35 @@ class Advanced extends Component {
 
 		ctx.scale(scale, scale);
 
-		var imgData = ctx.createImageData(this.canvasWidth * scale, this.canvasHeight * scale);
-		var w = imgData.width;
-		var h = imgData.height;
-		console.log(imgData);
+		let yMax = 0;
+
+		for(let t = 6; t <= tMax; ++t) {
+			const yc = lines.c.f(t);
+			const ys = lines.d.f(t) + lines.h.f(t) + lines.p.f(t);
+
+			if(yMax < yc)yMax = yc;
+			if(yMax < ys)yMax = ys;
+		}
+
+		const imgData = ctx.createImageData(this.canvasWidth * scale, this.canvasHeight * scale);
+		const canvasWidth = imgData.width;
+		const canvasHeight = imgData.height;
+		const drawWidth = canvasWidth - 60;
+		const drawHeight = canvasHeight - 20;
+		const chartXmin = 6;
+		const chartXmax = tMax + .5;
+		const chartWidth = chartXmax - chartXmin;
+		const chartYmin = 0;
+		const chartYmax = yMax;
+		const chartHeight = chartYmax - chartYmin;
+		const viewXmin = chartXmin;
+		const viewXmax = chartXmax;
+		const viewWidth = chartWidth;
+		const viewYmin = chartYmin;
+		const viewYmax = chartYmax;
+		const viewHeight = chartHeight;
+
+		console.log(yMax, imgData);
 		/*
 		for(let i = 0; i < 5000; ++i) {
 			let o = w * 4 * i + i * 4;
@@ -81,22 +107,21 @@ class Advanced extends Component {
 			imgData.data[o + 3] = 255;
         }
         */
-		for(let i = 0; i < w; ++i) {
+		for(let i = 0; i < canvasWidth; ++i) {
 			let o = 4 * i;
 			imgData.data[o + 0] = 0;
 			imgData.data[o + 1] = 0;
 			imgData.data[o + 2] = 0;
 			imgData.data[o + 3] = 255;
 		}
-		for(let i = 0; i < h; ++i) {
-			let o = w * i * 4;
+		for(let i = 0; i < canvasHeight; ++i) {
+			let o = canvasWidth * i * 4;
 			imgData.data[o + 0] = 0;
 			imgData.data[o + 1] = 0;
 			imgData.data[o + 2] = 0;
 			imgData.data[o + 3] = 255;
 		}
-		imgData.data[3] = imgData.data[w * h * 4 - 1] = imgData.data[(w - 1) * (h - 1) * 4 - 5] = imgData.data[w * h * 4 - 9] = 255;
-		imgData.data[3] = imgData.data[w * h * 4 - 1] = imgData.data[(w - 1) * (h - 1) * 4 - 5] = imgData.data[w * h * 4 - 9] = 255;
+		imgData.data[3] = imgData.data[canvasWidth * canvasHeight * 4 - 1] = 255;
 		ctx.putImageData(imgData, 0, 0);
 
 		ctx.fillStyle = "#bada55";
@@ -112,8 +137,8 @@ class Advanced extends Component {
 		ctx.fillText(this.canvasWidth, 200, 20);
 		ctx.fillText(this.canvasHeight, 200, 40);
 		ctx.fillText(scale, 200, 60);
-		ctx.fillText(w, 200, 80);
-		ctx.fillText(h, 200, 100);
+		ctx.fillText(canvasWidth, 200, 80);
+		ctx.fillText(canvasHeight, 200, 100);
 		ctx.fillText(imgData.width, 200, 120);
 		ctx.fillText(imgData.height, 200, 140);
 		ctx.fillText(ctx.measureText("1.000.000").width, 200, 160);
@@ -142,7 +167,6 @@ class Advanced extends Component {
 				const data = getData(stat, region);
 				const { fs, tMax } = gauss(data, stat, region);
 				const f = fs[7];
-				console.log(fs, tMax);
 
 				if(tmax < tMax) tmax = tMax;
 
