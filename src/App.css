@@ -5,7 +5,9 @@
 }
 
 .Content {
+	max-width: 1000px;
 	padding: 10px;
+	padding-bottom: 50px;
 	text-align: justify;
 	font-size: 14px;
 }
@@ -48,10 +50,14 @@
 }
 
 .Header {
-	font-size: 26px;
 	padding: 15px;
 	padding-left: 80px;
 	background: #d0d0d0;
+}
+
+.Fit {
+	max-width: 99%;
+	max-height: 99%;
 }
 
 .Sticky {

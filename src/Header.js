@@ -1,4 +1,6 @@
 import React, { Component } from "react";
+import { withRouter } from "react-router";
+import Option from "./Option";
 
 let sticky;
 
@@ -32,11 +34,11 @@ class Header extends Component {
 					<p>previsioni andamento</p>
 				</div>
 				<div className="Header" id="Header">
-					<p><a href="/grafico" style={{ textDecoration: "none" }}>vai al grafico</a></p>
+					<Option enabled={true} desc="vai al grafico" onClick={() => this.props.history.push("/grafico")} style={{ fontSize: "26px" }} />
 				</div>
 			</div>
 		);
 	}
 }
 
-export default Header;
+export default withRouter(Header);

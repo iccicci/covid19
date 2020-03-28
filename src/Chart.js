@@ -1,11 +1,13 @@
 import React, { Component } from "react";
+import { withRouter } from "react-router";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
 import { day2date, getData, groups, prociv, procivc, refresh, stats } from "./definitions";
-import {  gauss2, gaussChart } from "./gauss";
+import { gauss2, gaussChart } from "./gauss";
 import regression from "regression";
 
 import CanvasJSReact from "./canvasjs.react";
 import Advanced from "./Advanced";
+import Option from "./Option";
 
 const regressions = [
 	{ filter: () => 1, func: "linear", legend: { i: "lineare", e: "linear" }, order: {} },
@@ -65,14 +67,6 @@ function Forecast(props) {
 			</div>
 			<Option enabled={true} desc={l === "i" ? "rimuovi questa proiezione" : "remove this forecast"} onClick={remove} />
 		</div>
-	);
-}
-
-function Option(props) {
-	return (
-		<button className={props.enabled ? "EnabledOption" : "DisabledOption"} onClick={props.onClick}>
-			{props.desc}
-		</button>
 	);
 }
 
@@ -156,7 +150,7 @@ class Chart extends Component {
 	componentDidMount() {
 		const { hash, origin } = window.location;
 
-		this.origin = origin + "/#";
+		this.origin = origin + "/grafico#";
 
 		if(hash) {
 			try {
@@ -225,7 +219,7 @@ class Chart extends Component {
 			<div className="App">
 				<header id="head">
 					<p>
-						{l === "i" ? "lingua" : "language"}:
+						<Option enabled={true} desc="home" onClick={() => this.props.history.push("/")} /> -{l === "i" ? " lingua" : " language"}:
 						<Option enabled={l === "e"} desc="english" onClick={() => this.calculateForecasts("e")} />
 						<Option enabled={l === "i"} desc="italiano" onClick={() => this.calculateForecasts("i")} />
 						{l === "i" ? "  -  regione: " : "  -  region: "}
@@ -305,4 +299,4 @@ class Chart extends Component {
 	}
 }
 
-export default Chart;
+export default withRouter(Chart);
