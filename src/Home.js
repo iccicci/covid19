@@ -82,7 +82,7 @@ class Home extends Component {
 					</p>
 					<h3>E non finisce qui!</h3>
 					<p>
-						In realtà l’andamento più plausibile è quello a “picco asimmetrico”, ma per ragioni simile a quelle citate poco fa ancora non ha ancora senso fare previsioni di questo tipo (ma le faremo,
+						In realtà l’andamento più plausibile è quello a “picco asimmetrico”, ma per ragioni simile a quelle citate poco fa non ha ancora senso fare previsioni di questo tipo (ma le faremo,
 						non temete), quindi per ora riempio il mio tempo lavorando ad una visualizzazione… diversa...
 					</p>
 				</div>
