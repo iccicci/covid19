@@ -66,6 +66,37 @@
 	width: 100%;
 }
 
+.Table {
+	background-color: #ffffff;
+	border: 1px solid #000000;
+	display: table;
+	padding: 9px;
+	position: absolute;
+	width: auto;
+}
+
+.TCellL {
+	display: table-column;
+	float: left;
+	font-size: 14px;
+	text-align: right;
+	width: 100px;
+}
+
+.TCellR {
+	display: table-column;
+	float: left;
+	font-size: 14px;
+	padding-left: 3px;
+	text-align: right;
+	width: 70px;
+}
+
+.TRow {
+	display: table-row;
+	width: auto;
+}
+
 .Welcome {
 	background-color: #f0f0f0;
 	font-size: 22px;

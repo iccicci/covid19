@@ -219,7 +219,10 @@ class Chart extends Component {
 			<div className="App">
 				<header id="head">
 					<p>
-						<Option enabled={true} desc="home" onClick={() => this.props.history.push("/")} /> -{l === "i" ? " lingua" : " language"}:
+						{l === "i" ? "visualizzazione" : "view"}:
+						<Option enabled={! v} desc={l === "i" ? "classica" : "classical"} onClick={() => this.setState({ v: 0 })} />
+						<Option enabled={v} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.setState({ v: 1 })} /> -
+						{l === "i" ? " lingua" : " language"}:
 						<Option enabled={l === "e"} desc="english" onClick={() => this.calculateForecasts("e")} />
 						<Option enabled={l === "i"} desc="italiano" onClick={() => this.calculateForecasts("i")} />
 						{l === "i" ? "  -  regione: " : "  -  region: "}
@@ -232,11 +235,8 @@ class Chart extends Component {
 								{this.citiesItems[r]}
 							</select>
 						) : null}
-						{/*
-						{l === "i" ? "  -  visualizzazione" : "  -  view"}:
-						<Option enabled={! v} desc={l === "i" ? "classica" : "classical"} onClick={() => this.setState({ v: 0 })} />
-						<Option enabled={v} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.setState({ v: 1 })} />
-						*/}
+						{" - "}
+						<Option enabled={true} desc="home" onClick={() => this.props.history.push("/")} />
 					</p>
 					{v ? null : (
 						<div>
@@ -265,7 +265,7 @@ class Chart extends Component {
 						<Advanced language={l} region={r} ref="advanced" />
 					</div>
 				) : (
-					<div>
+					<div style={{ paddingBottom: "20px" }}>
 						<div>
 							<CanvasJSReact.CanvasJSChart options={options} />
 						</div>

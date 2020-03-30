@@ -62,7 +62,10 @@ const models = {
 	}
 };
 
+const rounds = 8;
+
 export function gauss(data, stat, region, city) {
+	if(stat === "h" && region === 5) throw new Error("Exclude healed Veneto");
 	if(stat === "a" && region === 2) throw new Error("Exclude home Aosta");
 	if(stat === "s" && region === 17) throw new Error("Exclude symptoms Basilicata");
 	if(city === 59) throw new Error("Exclude Latina");
@@ -70,7 +73,6 @@ export function gauss(data, stat, region, city) {
 
 	const fs = [];
 	const m = models[stats[stat].model];
-	const rounds = 8;
 	const t = data.map(([t]) => t);
 
 	let beta = m.beta0(data);
@@ -146,6 +148,8 @@ export function gaussChart(data, stat, region, city, language) {
 
 		ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}` });
 	}
+
+	return ret;
 	*/
 
 	const dataPoints = [];

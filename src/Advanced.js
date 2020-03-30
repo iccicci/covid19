@@ -3,6 +3,8 @@ import { prociv, getData, stats } from "./definitions";
 import { gauss } from "./gauss";
 
 const dict = {
+	data:    { e: "data", i: "dato" },
+	day:     { e: "day", i: "giorno" },
 	desktop: {
 		e: (
 			<span>
@@ -15,16 +17,138 @@ const dict = {
 			</span>
 		)
 	},
-	error:  { e: "Not enough data to produce a valid forecast for", i: "Non ci sono ancora abbastanza dati per fare una proiezione affidabile in" },
-	mobile: { e: "horizontal zoom - vertical zoom", i: "zoom orizzontale - zoom verticale" }
+	err:      { e: "error", i: "errore" },
+	error:    { e: "Not enough data to produce a valid forecast for", i: "Non ci sono ancora abbastanza dati per fare una proiezione affidabile in" },
+	forecast: { e: "forecast", i: "proiezione" },
+	mobile:   { e: "horizontal zoom - vertical zoom", i: "zoom orizzontale - zoom verticale" },
+	record:   { e: "record", i: "registrato" },
+	units:    { e: "units", i: "unità" }
 };
 
+const drawXOffset = 50;
+const drawYOffset = 20;
+const imgScale = window.devicePixelRatio;
+const lines = {};
 const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
+const relevant = ["a", "c", "d", "i", "s", "b", "p", "h"];
+const rgb = { d: { r: 200, g: 100, b: 30 }, i: { r: 255, g: 0, b: 0 }, s: { r: 255, g: 128, b: 0 }, a: { r: 255, g: 255, b: 0 }, c: { r: 0, g: 255, b: 0 } };
 
+let reg = 0;
 let shift;
+let x2t = () => 0;
+let y2units = () => 0;
 
 document.addEventListener("keydown", event => (event.keyCode === 16 ? (shift = true) : null));
 document.addEventListener("keyup", event => (event.keyCode === 16 ? (shift = false) : null));
+
+relevant.forEach(stat => (lines[stat] = { f: () => 0 }));
+
+class ToolTip extends Component {
+	constructor() {
+		super();
+		this.state = { day: 0, display: "none", left: "0px", top: "0px" };
+	}
+
+	hide() {
+		this.setState({ day: 0 });
+	}
+
+	render() {
+		const { language } = this.props;
+		const { day, display, left, units, top } = this.state;
+		const forecasts = {};
+		const functions = {};
+		const record = {};
+		const date = new Date(2020, 1, 18 + day, 3).toISOString().substr(5, 5);
+
+		if(prociv[reg].data[day]) Object.keys(lines).forEach(stat => (record[stat] = prociv[reg].data[day][stat]));
+
+		relevant.forEach(stat => {
+			if(prociv[reg].data[day]) record[stat] = prociv[reg].data[day][stat];
+			forecasts[stat] = functions[stat] = Math.floor(lines[stat].f(day));
+			if(stat === "h") forecasts.h = forecasts.c - forecasts.d - forecasts.p;
+			if(stat === "p") forecasts.p = forecasts.a + forecasts.b;
+			if(stat === "b") forecasts.b = forecasts.i + forecasts.s;
+		});
+
+		const error = (Math.abs(forecasts.h - functions.h) / forecasts.h + Math.abs(forecasts.p - functions.p) / forecasts.p + Math.abs(forecasts.s - functions.s) / forecasts.s) * 100;
+
+		return (
+			<div className="Table" style={{ display, left, top }}>
+				<div className="TRow">
+					<div className="TCellL">{dict.day[language]}:</div>
+					<div className="TCellR">{date}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL">{dict.units[language]}:</div>
+					<div className="TCellR">{units}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL">{dict.data[language]}:</div>
+					<div className="TCellR">{dict.forecast[language]}</div>
+					<div className="TCellR">{dict.record[language]}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL">{stats.c.legend[language]}:</div>
+					<div className="TCellR">{forecasts.c}</div>
+					<div className="TCellR">{record.c ? record.c : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL"><span style={{ color: "#00dd00" }}>{stats.h.legend[language]}</span>:</div>
+					<div className="TCellR">{forecasts.h}</div>
+					<div className="TCellR">{record.h ? record.h : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL">{stats.p.legend[language]}:</div>
+					<div className="TCellR">{forecasts.p}</div>
+					<div className="TCellR">{record.p ? record.p : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL"><span style={{ color: "#dddd00" }}>{stats.a.legend[language]}</span>:</div>
+					<div className="TCellR">{forecasts.a}</div>
+					<div className="TCellR">{record.a ? record.a : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL">{stats.b.legend[language]}:</div>
+					<div className="TCellR">{forecasts.b}</div>
+					<div className="TCellR">{record.b ? record.b : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL"><span style={{ color: "#ff8000" }}>{stats.s.legend[language]}</span>:</div>
+					<div className="TCellR">{forecasts.s}</div>
+					<div className="TCellR">{record.s ? record.s : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL"><span style={{ color: "#dd0000" }}>{stats.i.legend[language]}</span>:</div>
+					<div className="TCellR">{forecasts.i}</div>
+					<div className="TCellR">{record.i ? record.i : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL"><span style={{ color: "#c8641e" }}>{stats.d.legend[language]}</span>:</div>
+					<div className="TCellR">{forecasts.d}</div>
+					<div className="TCellR">{record.d ? record.d : ""}</div>
+				</div>
+				<div className="TRow">
+					<div className="TCellL">{dict.err[language]}:</div>
+					<div className="TCellR">{error.toFixed(2)}%</div>
+					<div className="TCellR"></div>
+				</div>
+			</div>
+		);
+	}
+
+	setState(state) {
+		const { day, units, x, y } = state;
+
+		if(day < 6 || units < 0) return super.setState({ display: "none" });
+
+		state.display = "table";
+		state.left = x + (x > 280 ? -280 : 10) + "px";
+		state.top = y + (y > 230 ? -230 : 10) + "px";
+
+		super.setState(state);
+	}
+}
 
 class Advanced extends Component {
 	constructor() {
@@ -34,6 +158,35 @@ class Advanced extends Component {
 		this.viewportHeight = window.innerHeight;
 		this.viewportWidth = window.innerWidth;
 		this.isPortrait = this.viewportHeight > this.viewportWidth;
+	}
+
+	canvasMouse(e) {
+		let mouseX = 0;
+		let mouseY = 0;
+		let elementX = 0;
+		let elementY = 0;
+		let element = e.target;
+
+		if(! e) e = window.event;
+		if(e.pageX || e.pageY) {
+			mouseX = e.pageX;
+			mouseY = e.pageY;
+		} else if(e.clientX || e.clientY) {
+			mouseX = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+			mouseY = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+		}
+
+		if(element.offsetParent) {
+			do {
+				elementX += element.offsetLeft;
+				elementY += element.offsetTop;
+			} while((element = element.offsetParent));
+		}
+
+		const relativeX = mouseX - elementX;
+		const relativeY = mouseY - elementY;
+
+		this.refs.tooltip.setState({ day: x2t(relativeX), units: y2units(relativeY), x: mouseX, y: mouseY });
 	}
 
 	componentDidMount() {
@@ -53,106 +206,8 @@ class Advanced extends Component {
 		window.removeEventListener("resize", this.handleResize);
 	}
 
-	draw() {
-		const canvas = this.refs.canvas;
-		const { lines, tMax } = this;
-
-		if(! this.tMax) return;
-		if(! this.refs.canvas) return;
-
-		const scale = window.devicePixelRatio;
-
-		canvas.width = this.canvasWidth * scale;
-		canvas.height = this.canvasHeight * scale;
-
-		const ctx = canvas.getContext("2d");
-
-		ctx.scale(scale, scale);
-
-		let yMax = 0;
-
-		for(let t = 6; t <= tMax; ++t) {
-			const yc = lines.c.f(t);
-			const ys = lines.d.f(t) + lines.h.f(t) + lines.p.f(t);
-
-			if(yMax < yc)yMax = yc;
-			if(yMax < ys)yMax = ys;
-		}
-
-		const imgData = ctx.createImageData(this.canvasWidth * scale, this.canvasHeight * scale);
-		const canvasWidth = imgData.width;
-		const canvasHeight = imgData.height;
-		const drawWidth = canvasWidth - 60;
-		const drawHeight = canvasHeight - 20;
-		const chartXmin = 6;
-		const chartXmax = tMax + .5;
-		const chartWidth = chartXmax - chartXmin;
-		const chartYmin = 0;
-		const chartYmax = yMax;
-		const chartHeight = chartYmax - chartYmin;
-		const viewXmin = chartXmin;
-		const viewXmax = chartXmax;
-		const viewWidth = chartWidth;
-		const viewYmin = chartYmin;
-		const viewYmax = chartYmax;
-		const viewHeight = chartHeight;
-
-		console.log(yMax, imgData);
-		/*
-		for(let i = 0; i < 5000; ++i) {
-			let o = w * 4 * i + i * 4;
-			imgData.data[o + 0] = 0;
-			imgData.data[o + 1] = 0;
-			imgData.data[o + 2] = 0;
-			imgData.data[o + 3] = 255;
-        }
-        */
-		for(let i = 0; i < canvasWidth; ++i) {
-			let o = 4 * i;
-			imgData.data[o + 0] = 0;
-			imgData.data[o + 1] = 0;
-			imgData.data[o + 2] = 0;
-			imgData.data[o + 3] = 255;
-		}
-		for(let i = 0; i < canvasHeight; ++i) {
-			let o = canvasWidth * i * 4;
-			imgData.data[o + 0] = 0;
-			imgData.data[o + 1] = 0;
-			imgData.data[o + 2] = 0;
-			imgData.data[o + 3] = 255;
-		}
-		imgData.data[3] = imgData.data[canvasWidth * canvasHeight * 4 - 1] = 255;
-		ctx.putImageData(imgData, 0, 0);
-
-		ctx.fillStyle = "#bada55";
-		ctx.fillRect(10, 10, 300, 300);
-		ctx.fillStyle = "#ffffff";
-		ctx.font = "12px Helvetica";
-		/*
-		ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        */
-
-		var textString = "this.canvasWidth";
-		ctx.fillText(this.canvasWidth, 200, 20);
-		ctx.fillText(this.canvasHeight, 200, 40);
-		ctx.fillText(scale, 200, 60);
-		ctx.fillText(canvasWidth, 200, 80);
-		ctx.fillText(canvasHeight, 200, 100);
-		ctx.fillText(imgData.width, 200, 120);
-		ctx.fillText(imgData.height, 200, 140);
-		ctx.fillText(ctx.measureText("1.000.000").width, 200, 160);
-		ctx.fillStyle = "#000000";
-		ctx.fillText("1.000.000", 55 - ctx.measureText("1.000.000").width, 20);
-		ctx.fillText("800.000", 55 - ctx.measureText("800.000").width, 40);
-		ctx.fillText("70.000", 55 - ctx.measureText("70.000").width, 60);
-		ctx.fillText("1.000", 55 - ctx.measureText("1.000").width, 80);
-		ctx.fillText("500", 55 - ctx.measureText("500").width, 100);
-	}
-
 	forecast(region) {
 		const last = prociv[0].data.lastIndexOf(prociv[0].data.slice(-1)[0]);
-		const lines = {};
 
 		let tmax = 0;
 
@@ -163,7 +218,7 @@ class Advanced extends Component {
 		this.region = region;
 
 		try {
-			["a", "b", "c", "d", "h", "i", "p", "s"].forEach(stat => {
+			relevant.forEach(stat => {
 				const data = getData(stat, region);
 				const { fs, tMax } = gauss(data, stat, region);
 				const f = fs[7];
@@ -176,7 +231,6 @@ class Advanced extends Component {
 			return this.setState({ error: true });
 		}
 
-		console.log(tmax, lines);
 		this.lines = lines;
 		this.tMax = tmax;
 		this.setState({ error: false }, () => {
@@ -188,10 +242,19 @@ class Advanced extends Component {
 	render() {
 		const { language, region } = this.props;
 
+		reg = region;
+
 		return (
 			<div>
 				<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
-				<div align="center">{this.state.error ? <div className="Error">{`${dict.error[language]} ${prociv[region].name}`}</div> : <canvas id="canv" ref="canvas" />}</div>
+				<div align="center">
+					{this.state.error ? (
+						<div className="Error">{`${dict.error[language]} ${prociv[region].name}`}</div>
+					) : (
+						<canvas ref="canvas" onMouseMove={e => this.canvasMouse(e)} onMouseOut={() => this.refs.tooltip.hide()} />
+					)}
+					<ToolTip language={language} ref="tooltip" />
+				</div>
 			</div>
 		);
 	}
@@ -222,6 +285,170 @@ class Advanced extends Component {
 		this.refs.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest + (this.disappeared || ! mobile ? 0 : 200)) + "px";
 
 		this.draw();
+	}
+
+	draw() {
+		const canvas = this.refs.canvas;
+		const { canvasWidth, canvasHeight, lines, tMax } = this;
+
+		if(! this.tMax) return;
+		if(! this.refs.canvas) return;
+
+		canvas.width = canvasWidth * imgScale;
+		canvas.height = canvasHeight * imgScale;
+
+		const ctx = canvas.getContext("2d");
+
+		ctx.scale(imgScale, imgScale);
+
+		let yMax = 0;
+
+		for(let t = 6; t <= tMax; ++t) {
+			const yc = lines.c.f(t);
+			const ys = lines.d.f(t) + lines.h.f(t) + lines.p.f(t);
+
+			if(yMax < yc) yMax = yc;
+			if(yMax < ys) yMax = ys;
+		}
+
+		const chartXmin = 5.5;
+		const chartXmax = tMax + 0.5;
+		const chartWidth = chartXmax - chartXmin;
+		const chartYmin = 0;
+		const chartYmax = yMax * 1.01;
+		const chartHeight = chartYmax - chartYmin;
+		const drawWidth = canvasWidth - drawXOffset;
+		const drawHeight = canvasHeight - drawYOffset;
+		const imgWidth = Math.floor((canvasWidth - drawXOffset) * imgScale);
+		const imgHeight = Math.floor((canvasHeight - drawYOffset) * imgScale);
+		const viewXmin = chartXmin;
+		const viewXmax = chartXmax;
+		const viewWidth = chartWidth;
+		const view2CanvasXScale = drawWidth / viewWidth;
+		const view2ImgXScale = imgWidth / viewWidth;
+		const viewYmin = chartYmin;
+		const viewYmax = chartYmax;
+		const viewHeight = chartHeight;
+		const view2CanvasYScale = drawHeight / viewHeight;
+		const view2ImgYScale = imgHeight / viewHeight;
+		const step = imgWidth * 4;
+
+		const x2Canvas = x => (x - viewXmin) * view2CanvasXScale + drawXOffset;
+		const y2Canvas = y => drawHeight - (y - viewYmin) * view2CanvasYScale;
+		const x2Img = x => Math.floor((x - viewXmin) * view2ImgXScale);
+		const y2Img = y => imgHeight - Math.floor((y - viewYmin) * view2ImgYScale) - 1;
+
+		x2t = x => Math.floor((x - drawXOffset) / view2CanvasXScale + viewXmin);
+		y2units = y => Math.floor((drawHeight - y) / view2CanvasYScale + viewYmin);
+
+		const back = ctx.getImageData(drawXOffset * imgScale, 0, imgWidth, imgHeight);
+
+		for(let i = 0; i < imgWidth; ++i) {
+			const t = viewXmin + i / view2ImgXScale;
+
+			let first = (i + imgWidth * (imgHeight - 1)) * 4;
+			let sum = 0;
+
+			["d", "i", "s", "a", "c"].forEach(stat => {
+				const f = this.lines[stat].f(t);
+				const last = y2Img((stat === "c" ? 0 : sum) + f) * imgWidth * 4;
+				const { r, g, b } = rgb[stat];
+
+				for(let y = first; y > last; y -= step) {
+					back.data[y] = r;
+					back.data[y + 1] = g;
+					back.data[y + 2] = b;
+					back.data[y + 3] = 255;
+				}
+
+				first -= Math.floor(f * view2ImgYScale) * imgWidth * 4;
+				sum += f;
+			});
+		}
+
+		ctx.putImageData(back, drawXOffset * imgScale, 0);
+
+		const img = ctx.getImageData(drawXOffset * imgScale, 0, imgWidth, imgHeight);
+
+		const drawXScale = () => {
+			let steps = 1;
+
+			while(steps * view2CanvasXScale < 35) ++steps;
+
+			ctx.fillStyle = "#ffffff";
+			ctx.fillRect(drawXOffset, canvasHeight - drawYOffset, canvasWidth - drawXOffset, drawYOffset);
+			ctx.fillStyle = "#000000";
+			ctx.font = "12px Arial";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "top";
+
+			for(let t = Math.ceil(viewXmin); t < viewXmax; t += steps) {
+				const first = x2Img(t) * 4;
+				const last = imgWidth * imgHeight * 4;
+
+				for(let i = first; i < last; i += step) {
+					img.data[i] = 64;
+					img.data[i + 1] = 64;
+					img.data[i + 2] = 64;
+					img.data[i + 3] = 255;
+				}
+
+				ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
+			}
+		};
+
+		const drawYScale = () => {
+			let next = true;
+			let scale = (viewYmax - viewYmin) / (drawHeight / 50);
+			let prev = 1;
+			let diff = scale;
+			let exp = 1;
+			let uni = 0;
+
+			while(next) {
+				if(uni === 0) uni = 1;
+				else if(uni === 1) uni = 2;
+				else if(uni === 2) uni = 5;
+				else {
+					uni = 1;
+					exp *= 10;
+				}
+
+				if(Math.abs(scale - uni * exp) < diff) {
+					prev = uni * exp;
+					diff = Math.abs(scale - prev);
+				} else {
+					next = false;
+					scale = prev;
+				}
+			}
+
+			ctx.fillStyle = "#ffffff";
+			ctx.fillRect(0, 0, drawXOffset, canvasHeight);
+			ctx.fillStyle = "#000000";
+			ctx.font = "12px Arial";
+			ctx.textAlign = "right";
+			ctx.textBaseline = "middle";
+
+			for(let units = Math.floor(viewYmin / scale) * scale; units < viewYmax; units += scale) {
+				const first = imgWidth * 4 * y2Img(units);
+				const last = first + imgWidth * 4;
+
+				for(let i = first; i < last; i += 4) {
+					img.data[i] = 64;
+					img.data[i + 1] = 64;
+					img.data[i + 2] = 64;
+					img.data[i + 3] = 255;
+				}
+
+				ctx.fillText(units, drawXOffset - 2, y2Canvas(units));
+			}
+		};
+
+		drawYScale();
+		drawXScale();
+
+		ctx.putImageData(img, drawXOffset * imgScale, 0);
 	}
 }
 
