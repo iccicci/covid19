@@ -32,6 +32,24 @@ const lines = {};
 const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
 const relevant = ["a", "c", "d", "i", "s", "b", "p", "h"];
 const rgb = { d: { r: 200, g: 100, b: 30 }, i: { r: 255, g: 0, b: 0 }, s: { r: 255, g: 128, b: 0 }, a: { r: 255, g: 255, b: 0 }, c: { r: 0, g: 255, b: 0 } };
+const tip = [
+	["c", "#000000"],
+	["h", "#00dd00"],
+	["p", "#000000"],
+	["a", "#dddd00"],
+	["b", "#000000"],
+	["s", "#ff8000"],
+	["i", "#dd0000"],
+	["d", "#c8641e"]
+];
+
+const records = [
+	["#00c000", ["d", "i", "s", "a", "h"]],
+	["#c0c000", ["d", "i", "s", "a"]],
+	["#c06000", ["d", "i", "s"]],
+	["#c00000", ["d", "i"]],
+	["#64320f", ["d"]]
+];
 
 let reg = 0;
 let shift;
@@ -71,7 +89,8 @@ class ToolTip extends Component {
 			if(stat === "b") forecasts.b = forecasts.i + forecasts.s;
 		});
 
-		const error = (Math.abs(forecasts.h - functions.h) / forecasts.h + Math.abs(forecasts.p - functions.p) / forecasts.p + Math.abs(forecasts.s - functions.s) / forecasts.s) * 100;
+		const single = stat => (forecasts[stat] < 2 && functions[stat] < 2 ? 0 : Math.abs(forecasts[stat] - functions[stat]) / Math.max(forecasts[stat], functions[stat]));
+		const error = 100 * ["h", "p", "b"].reduce((avg, stat) => avg + single(stat), 0);
 
 		return (
 			<div className="Table" style={{ display, left, top }}>
@@ -85,53 +104,19 @@ class ToolTip extends Component {
 				</div>
 				<div className="TRow">
 					<div className="TCellL">{dict.data[language]}:</div>
-					<div className="TCellR">{dict.forecast[language]}</div>
-					<div className="TCellR">{dict.record[language]}</div>
+					<div className="TCellR">{dict[record.c ? "record" : "forecast"][language]}</div>
 				</div>
-				<div className="TRow">
-					<div className="TCellL">{stats.c.legend[language]}:</div>
-					<div className="TCellR">{forecasts.c}</div>
-					<div className="TCellR">{record.c ? record.c : ""}</div>
-				</div>
-				<div className="TRow">
-					<div className="TCellL"><span style={{ color: "#00dd00" }}>{stats.h.legend[language]}</span>:</div>
-					<div className="TCellR">{forecasts.h}</div>
-					<div className="TCellR">{record.h ? record.h : ""}</div>
-				</div>
-				<div className="TRow">
-					<div className="TCellL">{stats.p.legend[language]}:</div>
-					<div className="TCellR">{forecasts.p}</div>
-					<div className="TCellR">{record.p ? record.p : ""}</div>
-				</div>
-				<div className="TRow">
-					<div className="TCellL"><span style={{ color: "#dddd00" }}>{stats.a.legend[language]}</span>:</div>
-					<div className="TCellR">{forecasts.a}</div>
-					<div className="TCellR">{record.a ? record.a : ""}</div>
-				</div>
-				<div className="TRow">
-					<div className="TCellL">{stats.b.legend[language]}:</div>
-					<div className="TCellR">{forecasts.b}</div>
-					<div className="TCellR">{record.b ? record.b : ""}</div>
-				</div>
-				<div className="TRow">
-					<div className="TCellL"><span style={{ color: "#ff8000" }}>{stats.s.legend[language]}</span>:</div>
-					<div className="TCellR">{forecasts.s}</div>
-					<div className="TCellR">{record.s ? record.s : ""}</div>
-				</div>
-				<div className="TRow">
-					<div className="TCellL"><span style={{ color: "#dd0000" }}>{stats.i.legend[language]}</span>:</div>
-					<div className="TCellR">{forecasts.i}</div>
-					<div className="TCellR">{record.i ? record.i : ""}</div>
-				</div>
-				<div className="TRow">
-					<div className="TCellL"><span style={{ color: "#c8641e" }}>{stats.d.legend[language]}</span>:</div>
-					<div className="TCellR">{forecasts.d}</div>
-					<div className="TCellR">{record.d ? record.d : ""}</div>
-				</div>
+				{tip.map(([stat, color]) => (
+					<div className="TRow" key={stat}>
+						<div className="TCellL">
+							<span style={{ color }}>{stats[stat].legend[language]}</span>:
+						</div>
+						<div className="TCellR">{record.c ? record[stat] : forecasts[stat]}</div>
+					</div>
+				))}
 				<div className="TRow">
 					<div className="TCellL">{dict.err[language]}:</div>
-					<div className="TCellR">{error.toFixed(2)}%</div>
-					<div className="TCellR"></div>
+					<div className="TCellR">{record.c ? "NA" : error.toFixed(2) + "%"}</div>
 				</div>
 			</div>
 		);
@@ -143,7 +128,7 @@ class ToolTip extends Component {
 		if(day < 6 || units < 0) return super.setState({ display: "none" });
 
 		state.display = "table";
-		state.left = x + (x > 280 ? -280 : 10) + "px";
+		state.left = x + (x > 230 ? -230 : 10) + "px";
 		state.top = y + (y > 230 ? -230 : 10) + "px";
 
 		super.setState(state);
@@ -160,7 +145,7 @@ class Advanced extends Component {
 		this.isPortrait = this.viewportHeight > this.viewportWidth;
 	}
 
-	canvasMouse(e) {
+	handleMouseMove(e) {
 		let mouseX = 0;
 		let mouseY = 0;
 		let elementX = 0;
@@ -251,7 +236,7 @@ class Advanced extends Component {
 					{this.state.error ? (
 						<div className="Error">{`${dict.error[language]} ${prociv[region].name}`}</div>
 					) : (
-						<canvas ref="canvas" onMouseMove={e => this.canvasMouse(e)} onMouseOut={() => this.refs.tooltip.hide()} />
+						<canvas ref="canvas" onMouseMove={e => this.handleMouseMove(e)} onMouseOut={() => this.refs.tooltip.hide()} />
 					)}
 					<ToolTip language={language} ref="tooltip" />
 				</div>
@@ -285,6 +270,13 @@ class Advanced extends Component {
 		this.refs.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest + (this.disappeared || ! mobile ? 0 : 200)) + "px";
 
 		this.draw();
+	}
+
+	setState(state) {
+		super.setState(state, () => {
+			this.refs.tooltip.hide();
+			this.resize();
+		});
 	}
 
 	draw() {
@@ -367,6 +359,17 @@ class Advanced extends Component {
 		}
 
 		ctx.putImageData(back, drawXOffset * imgScale, 0);
+
+		ctx.lineWidth = "1";
+		records.forEach(([color, adds]) => {
+			const sum = day => adds.reduce((tot, stat) => tot + prociv[reg].data[day][stat], 0);
+
+			ctx.strokeStyle = color;
+			ctx.beginPath();
+			ctx.moveTo(x2Canvas(6), y2Canvas(sum(6)));
+			prociv[reg].data.forEach((e, i) => (i > 6 ? ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))) : null));
+			ctx.stroke();
+		});
 
 		const img = ctx.getImageData(drawXOffset * imgScale, 0, imgWidth, imgHeight);
 
