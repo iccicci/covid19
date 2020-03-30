@@ -34,7 +34,8 @@ class Header extends Component {
 					<p>previsioni andamento</p>
 				</div>
 				<div className="Header" id="Header">
-					<Option enabled={true} desc="vai al grafico" onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni")} style={{ fontSize: "26px" }} />
+					Grafici a <Option enabled={true} desc="linee" onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni")} style={{ fontSize: "26px" }} /> e ad{" "}
+					<Option enabled={true} desc="erea" onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni/andamento")} style={{ fontSize: "26px" }} />
 				</div>
 			</div>
 		);

@@ -250,8 +250,11 @@ class Advanced extends Component {
 		const isPortrait = newViewportHeight > newViewportWidth;
 		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight; // + document.getElementById("tip").clientHeight;
 
-		if(mobile && isPortrait !== this.isPortrait) window.location.reload();
-		if(mobile && newViewportHeight > this.viewportHeight) this.disappeared = true;
+		if(mobile) {
+			if(isPortrait !== this.isPortrait) window.location.reload();
+			if(this.disappeared) return;
+			if(newViewportHeight > this.viewportHeight) this.disappeared = true;
+		}
 
 		this.viewportHeight = newViewportHeight;
 		this.viewportWidth = newViewportWidth;

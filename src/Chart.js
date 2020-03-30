@@ -219,11 +219,11 @@ class Chart extends Component {
 			<div className="App">
 				<header id="head">
 					<p>
-						{/*
-						{l === "i" ? "visualizzazione" : "view"}:
-						<Option enabled={! this.props.surface} desc={l === "i" ? "classica" : "classical"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni")} />
-						<Option enabled={this.props.surface} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni/andamento")} /> -
-						*/}
+						<Option enabled={true} desc="home" onClick={() => this.props.history.push("/")} />
+						{" - "}
+						{l === "i" ? "grafico" : "chart"}:
+						<Option enabled={! this.props.surface} desc={l === "i" ? "linee" : "lines"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni")} />
+						<Option enabled={this.props.surface} desc={l === "i" ? "area" : "surface"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni/andamento")} /> -
 						{l === "i" ? " lingua" : " language"}:
 						<Option enabled={l === "e"} desc="english" onClick={() => this.calculateForecasts("e")} />
 						<Option enabled={l === "i"} desc="italiano" onClick={() => this.calculateForecasts("i")} />
@@ -237,8 +237,6 @@ class Chart extends Component {
 								{this.citiesItems[r]}
 							</select>
 						) : null}
-						{" - "}
-						<Option enabled={true} desc="home" onClick={() => this.props.history.push("/")} />
 					</p>
 					{this.props.surface ? null : (
 						<div>
