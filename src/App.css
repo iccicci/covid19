@@ -50,9 +50,10 @@
 }
 
 .Header {
-	padding: 15px;
-	padding-left: 80px;
 	background: #d0d0d0;
+	padding: 15px;
+	padding-left: 40px;
+	font-size: 26px;
 }
 
 .Fit {

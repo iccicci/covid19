@@ -9,6 +9,8 @@ class App extends Component {
 		return (
 			<Router>
 				<Switch>
+					<Route path="/coronavirus/grafico/proiezioni/andamento" component={() => <Chart surface={true} />}/>
+					<Route path="/coronavirus/grafico/proiezioni" component={Chart} />
 					<Route path="/grafico" component={Chart} />
 					<Route component={Home} />
 				</Switch>

@@ -129,7 +129,7 @@ class ToolTip extends Component {
 
 		state.display = "table";
 		state.left = x + (x > 230 ? -230 : 10) + "px";
-		state.top = y + (y > 230 ? -230 : 10) + "px";
+		state.top = y + (y > 231 ? -231 : y > 100 ? -y : 10) + "px";
 
 		super.setState(state);
 	}
@@ -231,7 +231,7 @@ class Advanced extends Component {
 
 		return (
 			<div>
-				<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
+				{/*<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>*/}
 				<div align="center">
 					{this.state.error ? (
 						<div className="Error">{`${dict.error[language]} ${prociv[region].name}`}</div>
@@ -248,21 +248,14 @@ class Advanced extends Component {
 		const newViewportHeight = window.innerHeight;
 		const newViewportWidth = window.innerWidth;
 		const isPortrait = newViewportHeight > newViewportWidth;
-		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight + document.getElementById("tip").clientHeight;
-		const hasOrientationChanged = isPortrait !== this.isPortrait;
-		let doIt;
+		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight; // + document.getElementById("tip").clientHeight;
 
-		if(hasOrientationChanged) window.location.reload();
-		if(newViewportHeight !== this.viewportHeight && newViewportHeight >= this.viewportHeight) {
-			this.disappeared = true;
-			doIt = true;
-		}
+		if(mobile && isPortrait !== this.isPortrait) window.location.reload();
+		if(mobile && newViewportHeight > this.viewportHeight) this.disappeared = true;
 
-		if(doIt || ! mobile) {
-			this.viewportHeight = newViewportHeight;
-			this.viewportWidth = newViewportWidth;
-			this.isPortrait = this.viewportHeight > this.viewportWidth;
-		}
+		this.viewportHeight = newViewportHeight;
+		this.viewportWidth = newViewportWidth;
+		this.isPortrait = this.viewportHeight > this.viewportWidth;
 
 		if(this.state.error) return;
 

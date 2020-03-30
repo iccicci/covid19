@@ -150,7 +150,7 @@ class Chart extends Component {
 	componentDidMount() {
 		const { hash, origin } = window.location;
 
-		this.origin = origin + "/grafico#";
+		this.origin = origin + `/coronavirus/grafico/proiezioni${this.props.surface ? "/andamento" : ""}#`;
 
 		if(hash) {
 			try {
@@ -198,7 +198,7 @@ class Chart extends Component {
 	render() {
 		if(! prociv[0]) return <div className="App" />;
 
-		const { f, l, r, v, w } = this.state;
+		const { f, l, r, w } = this.state;
 
 		const common = { markerSize: 8, markerType: "circle", showInLegend: true, type: "line" };
 		const lines = Object.entries(stats).filter(w ? ([stat]) => stat === "c" : ([stat]) => this.state[stat]);
@@ -219,9 +219,11 @@ class Chart extends Component {
 			<div className="App">
 				<header id="head">
 					<p>
+						{/*
 						{l === "i" ? "visualizzazione" : "view"}:
-						<Option enabled={! v} desc={l === "i" ? "classica" : "classical"} onClick={() => this.setState({ v: 0 })} />
-						<Option enabled={v} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.setState({ v: 1 })} /> -
+						<Option enabled={! this.props.surface} desc={l === "i" ? "classica" : "classical"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni")} />
+						<Option enabled={this.props.surface} desc={l === "i" ? "avanzata" : "advanced"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni/andamento")} /> -
+						*/}
 						{l === "i" ? " lingua" : " language"}:
 						<Option enabled={l === "e"} desc="english" onClick={() => this.calculateForecasts("e")} />
 						<Option enabled={l === "i"} desc="italiano" onClick={() => this.calculateForecasts("i")} />
@@ -229,8 +231,8 @@ class Chart extends Component {
 						<select value={r} onChange={event => this.setState({ r: parseInt(event.target.value, 10), w: 0 })}>
 							{this.regionsItems}
 						</select>
-						{r && ! v ? (l === "i" ? " provincia: " : " city: ") : ""}
-						{r && ! v ? (
+						{r && ! this.props.surface ? (l === "i" ? " provincia: " : " city: ") : ""}
+						{r && ! this.props.surface ? (
 							<select value={w} onChange={event => this.setState({ w: parseInt(event.target.value, 10) })}>
 								{this.citiesItems[r]}
 							</select>
@@ -238,7 +240,7 @@ class Chart extends Component {
 						{" - "}
 						<Option enabled={true} desc="home" onClick={() => this.props.history.push("/")} />
 					</p>
-					{v ? null : (
+					{this.props.surface ? null : (
 						<div>
 							<p>
 								trends:
@@ -260,7 +262,7 @@ class Chart extends Component {
 						</div>
 					)}
 				</header>
-				{v ? (
+				{this.props.surface ? (
 					<div>
 						<Advanced language={l} region={r} ref="advanced" />
 					</div>
