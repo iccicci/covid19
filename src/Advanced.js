@@ -116,7 +116,7 @@ class ToolTip extends Component {
 				))}
 				<div className="TRow">
 					<div className="TCellL">{dict.err[language]}:</div>
-					<div className="TCellR">{record.c ? "NA" : error.toFixed(2) + "%"}</div>
+					<div className="TCellR">{record.c ? "NA" : "±" + error.toFixed(2) + "%"}</div>
 				</div>
 			</div>
 		);
