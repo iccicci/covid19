@@ -1,5 +1,5 @@
 import { Matrix, pseudoInverse } from "ml-matrix";
-import { day2date, fill, prociv, stats } from "./definitions";
+import { checkExclude, day2date, fill, prociv, stats } from "./definitions";
 import erf from "math-erf";
 
 const { PI, ceil, exp, sqrt, SQRT2 } = Math;
@@ -25,7 +25,7 @@ const models = {
 		beta0: data => {
 			const ret = guess(data);
 
-			return [ret[0] * 10, 40, 10];
+			return [[ret[0] * 10, 40, 10]];
 		},
 		d: [
 			([, b, c]) => t => ((t - b) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c ** 2,
@@ -36,8 +36,12 @@ const models = {
 		tMax: ([, b]) => 2 * b - 6
 	},
 	gauss: {
-		beta0: guess,
-		d:     [
+		beta0: data => {
+			const ret = guess(data);
+
+			return [ret];
+		},
+		d: [
 			([, b, c]) => t => -exp(-((t - b) ** 2 / (2 * c ** 2))),
 			([a, b, c]) => t => -(((a * 4) / (2 * c ** 2) ** 2) * (t - b) * c ** 2 * exp(-((t - b) ** 2 / (2 * c ** 2)))),
 			([a, b, c]) => t => -(((a * 4) / (2 * c ** 2) ** 2) * (t - b) ** 2 * c * exp(-((t - b) ** 2 / (2 * c ** 2))))
@@ -49,7 +53,7 @@ const models = {
 		beta0: data => {
 			const ret = guess(data);
 
-			return [ret[0] / 10, ret[1], ret[2], ret[0]];
+			return [[ret[0] / 10, ret[1], ret[2], ret[0] / 2], [ret[0] / 10, ret[1] - 5, 3, ret[0] / 2], [ret[0] / 20, ret[1] - 10, ret[2], ret[0] / 2]];
 		},
 		d: [
 			([, b, c]) => t => SQRTPI2 * c * erf((b - t) / (SQRT2 * c)),
@@ -65,71 +69,83 @@ const models = {
 const rounds = 8;
 
 export function gauss(data, stat, region, city) {
-	if(stat === "h" && region === 5) throw new Error("Exclude healed Veneto");
-	if(stat === "a" && region === 2) throw new Error("Exclude home Aosta");
-	if(stat === "s" && region === 17) throw new Error("Exclude symptoms Basilicata");
-	if(city === 59) throw new Error("Exclude Latina");
-	if(city === 80) throw new Error("Exclude Reggio Calabria");
+	if(! checkExclude) {
+		if(city === 59) throw new Error("Exclude Latina");
+		if(city === 80) throw new Error("Exclude Reggio Calabria");
+	}
 
-	const fs = [];
 	const m = models[stats[stat].model];
 	const t = data.map(([t]) => t);
 
-	let beta = m.beta0(data);
-	let tMax = 0;
+	let betas = m.beta0(data);
 	//let Srp = 1e20;
 	//let Sr2p = 1e20;
 
-	const rows = data.length;
-	const cols = beta.length;
+	for(let beta of betas) {
+		const fs = [];
+		const rows = data.length;
+		const cols = beta.length;
 
-	for(let s = 0; s < rounds; ++s) {
-		const f = m.f(beta);
-		const tmax = ceil(m.tMax(beta));
+		if(checkExclude) console.log("beta0", beta);
 
-		if(tmax > tMax) tMax = tmax;
-		fs[s] = f;
+		try {
+			for(let s = 0; s < rounds; ++s) {
+				const f = m.f(beta);
 
-		const r = Matrix.columnVector(data.map(([t, y]) => y - f(t)));
-		const Jrjs = [];
-		//const Sr = r.data.map(e => e[0]).reduce((t, e) => t + e, 0);
-		//const Sr2 = r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0);
+				fs[s] = f;
 
-		//console.log(`beta${s}`, beta);
-		//console.log(`r${s}`, r);
-		//console.log(`Sr${s}`, Sr, Srp - Sr);
-		//console.log(`Sr2${s}`, Sr2, Sr2p - Sr2);
+				const r = Matrix.columnVector(data.map(([t, y]) => y - f(t)));
+				const Jrjs = [];
+				//const Sr = r.data.map(e => e[0]).reduce((t, e) => t + e, 0);
+				//const Sr2 = r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0);
 
-		//Srp = Sr;
-		//Sr2p = Sr2;
+				//console.log(`beta${s}`, beta);
+				//console.log(`r${s}`, r);
+				//console.log(`Sr${s}`, Sr, Srp - Sr);
+				//console.log(`Sr2${s}`, Sr2, Sr2p - Sr2);
 
-		if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
+				//Srp = Sr;
+				//Sr2p = Sr2;
 
-		const d = [];
+				if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
 
-		for(let j = 0; j < cols; ++j) d[j] = m.d[j](beta);
+				const d = [];
 
-		for(let i = 0; i < rows; ++i) {
-			const row = [];
+				for(let j = 0; j < cols; ++j) d[j] = m.d[j](beta);
 
-			for(let j = 0; j < cols; ++j) row.push(d[j](t[i]));
+				for(let i = 0; i < rows; ++i) {
+					const row = [];
 
-			Jrjs.push(row);
-		}
+					for(let j = 0; j < cols; ++j) row.push(d[j](t[i]));
 
-		const Jr = new Matrix(Jrjs);
+					Jrjs.push(row);
+				}
 
-		//console.log(`Jr${s}`, Jr);
+				const Jr = new Matrix(Jrjs);
 
-		const Beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(Jr).mmul(r));
+				//console.log(`Jr${s}`, Jr);
 
-		beta = Beta.data.map(e => e[0]);
+				const Beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(Jr).mmul(r));
 
-		if(beta[1] < 0) throw new Error("Negative peak");
-		if(beta[1] > 1000) throw new Error("Lost peak");
+				beta = Beta.data.map(e => e[0]);
+
+				if(beta[0] < 0) throw new Error("Negative variance");
+				if(beta[1] < 0) throw new Error("Negative peak");
+				if(beta[1] > 1000) throw new Error("Lost peak");
+			}
+
+			if(checkExclude) {
+				console.log(
+					"beta7",
+					beta.map(e => Math.round(e * 100) / 100)
+				);
+			}
+
+			return { fs, tMax: ceil(m.tMax(beta)) };
+		} catch(e) {}
 	}
 
-	return { fs, tMax };
+	throw new Error("no");
 }
 
 export function gaussChart(data, stat, region, city, language) {

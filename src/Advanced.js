@@ -219,8 +219,12 @@ class Advanced extends Component {
 	handleToolTip(event) {
 		const { clientX, clientY, target } = event;
 		const rect = target.getBoundingClientRect();
+		const offsetX = clientX - rect.left;
+		const offsetY = clientY - rect.top;
 
-		this.tooltip.setState({ day: x2t(clientX - rect.left), units: y2units(clientY - rect.top), x: clientX, y: clientY });
+		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
+
+		this.tooltip.setState({ day: x2t(offsetX), units: y2units(offsetY), x: clientX, y: clientY });
 	}
 
 	handleTouchEnd(event) {}
