@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { withRouter } from "react-router";
+import { Link } from "react-router-dom";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
 import { day2date, getData, groups, prociv, procivc, refresh, stats } from "./definitions";
 import { gauss2, gaussChart } from "./gauss";
@@ -214,16 +214,21 @@ class Chart extends Component {
 		};
 
 		window.history.pushState({}, null, this.origin + compressToBase64(JSON.stringify(this.state)));
+		const toggleClass = event => event.target.classList.toggle("NoDecoration");
+		const OptionLink = ({ desc, disabled, to }) => (
+			<Link to={to} onMouseOut={toggleClass} onMouseOver={toggleClass} style={disabled ? { color: "gray" } : {}}>
+				{desc}
+			</Link>
+		);
 
 		return (
 			<div className="App">
 				<header id="head">
 					<p>
-						<Option enabled={true} desc="home" onClick={() => this.props.history.push("/")} />
-						{" - "}
-						{l === "i" ? "grafico" : "chart"}:
-						<Option enabled={! this.props.surface} desc={l === "i" ? "linee" : "lines"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni")} />
-						<Option enabled={this.props.surface} desc={l === "i" ? "area" : "surface"} onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni/andamento")} /> -
+						<OptionLink desc="home" to="/" />
+						{l === "i" ? " - grafico: " : " - chart: "}
+						<OptionLink desc={l === "i" ? "linee" : "lines"} disabled={this.props.surface} to="/coronavirus/grafico/proiezioni" />{" "}
+						<OptionLink desc={l === "i" ? "area" : "surface"} disabled={! this.props.surface} to="/coronavirus/grafico/proiezioni/andamento" /> -
 						{l === "i" ? " lingua" : " language"}:
 						<Option enabled={l === "e"} desc="english" onClick={() => this.calculateForecasts("e")} />
 						<Option enabled={l === "i"} desc="italiano" onClick={() => this.calculateForecasts("i")} />
@@ -299,4 +304,4 @@ class Chart extends Component {
 	}
 }
 
-export default withRouter(Chart);
+export default Chart;

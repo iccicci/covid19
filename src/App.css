@@ -61,6 +61,10 @@
 	max-height: 99%;
 }
 
+.NoDecoration {
+	text-decoration: none;
+}
+
 .Sticky {
 	position: fixed;
 	top: 0;
