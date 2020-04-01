@@ -1,4 +1,5 @@
 import React, { Component } from "react";
+
 import { prociv, getData, stats } from "./definitions";
 import { gauss } from "./gauss";
 
@@ -128,8 +129,14 @@ class ToolTip extends Component {
 		if(day < 6 || units < 0) return super.setState({ display: "none" });
 
 		state.display = "table";
-		state.left = x + (x > 230 ? -230 : 10) + "px";
-		state.top = y + (y > 231 ? -231 : y > 100 ? -y : 10) + "px";
+
+		if(y > 217) {
+			state.left = (x > 198 ? x - 198 : 0) + "px";
+			state.top = y - 217 + "px";
+		} else {
+			state.left = x + (x > 198 ? -198 : 5) + "px";
+			state.top = "0px";
+		}
 
 		super.setState(state);
 	}
@@ -143,35 +150,6 @@ class Advanced extends Component {
 		this.viewportHeight = window.innerHeight;
 		this.viewportWidth = window.innerWidth;
 		this.isPortrait = this.viewportHeight > this.viewportWidth;
-	}
-
-	handleMouseMove(e) {
-		let mouseX = 0;
-		let mouseY = 0;
-		let elementX = 0;
-		let elementY = 0;
-		let element = e.target;
-
-		if(! e) e = window.event;
-		if(e.pageX || e.pageY) {
-			mouseX = e.pageX;
-			mouseY = e.pageY;
-		} else if(e.clientX || e.clientY) {
-			mouseX = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-			mouseY = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-		}
-
-		if(element.offsetParent) {
-			do {
-				elementX += element.offsetLeft;
-				elementY += element.offsetTop;
-			} while((element = element.offsetParent));
-		}
-
-		const relativeX = mouseX - elementX;
-		const relativeY = mouseY - elementY;
-
-		this.refs.tooltip.setState({ day: x2t(relativeX), units: y2units(relativeY), x: mouseX, y: mouseY });
 	}
 
 	componentDidMount() {
@@ -224,6 +202,43 @@ class Advanced extends Component {
 		});
 	}
 
+	handleMouseMove(event) {
+		if(mobile) return;
+
+		let mouseX = 0;
+		let mouseY = 0;
+		let elementX = 0;
+		let elementY = 0;
+		let element = event.target;
+
+		if(! event) event = window.event;
+		if(event.pageX || event.pageY) {
+			mouseX = event.pageX;
+			mouseY = event.pageY;
+		} else if(event.clientX || event.clientY) {
+			mouseX = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+			mouseY = event.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+		}
+
+		if(element.offsetParent) {
+			do {
+				elementX += element.offsetLeft;
+				elementY += element.offsetTop;
+			} while((element = element.offsetParent));
+		}
+
+		const relativeX = mouseX - elementX;
+		const relativeY = mouseY - elementY;
+
+		this.tooltip.setState({ day: x2t(relativeX), units: y2units(relativeY), x: mouseX, y: mouseY });
+	}
+
+	handleTouchEnd(event) {}
+
+	handleTouchMove(event) {}
+
+	handleTouchStart(event) {}
+
 	render() {
 		const { language, region } = this.props;
 
@@ -236,9 +251,16 @@ class Advanced extends Component {
 					{this.state.error ? (
 						<div className="Error">{`${dict.error[language]} ${prociv[region].name}`}</div>
 					) : (
-						<canvas ref="canvas" onMouseMove={e => this.handleMouseMove(e)} onMouseOut={() => this.refs.tooltip.hide()} />
+						<canvas
+							ref={ref => (this.canvas = ref)}
+							onMouseMove={event => this.handleMouseMove(event)}
+							onMouseOut={() => this.tooltip.hide()}
+							onTouchEnd={event => this.handleTouchEnd(event)}
+							onTouchMove={event => this.handleTouchMove(event)}
+							onTouchStart={event => this.handleTouchStart(event)}
+						/>
 					)}
-					<ToolTip language={language} ref="tooltip" />
+					<ToolTip language={language} ref={ref => (this.tooltip = ref)} />
 				</div>
 			</div>
 		);
@@ -254,6 +276,7 @@ class Advanced extends Component {
 			if(isPortrait !== this.isPortrait) window.location.reload();
 			if(this.disappeared) return;
 			if(newViewportHeight > this.viewportHeight) this.disappeared = true;
+			//this.canvas.style.touchAction = "none";
 		}
 
 		this.viewportHeight = newViewportHeight;
@@ -262,25 +285,25 @@ class Advanced extends Component {
 
 		if(this.state.error) return;
 
-		this.refs.canvas.style.width = (this.canvasWidth = this.viewportWidth - 20) + "px";
-		this.refs.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest + (this.disappeared || ! mobile ? 0 : 200)) + "px";
+		this.canvas.style.width = (this.canvasWidth = this.viewportWidth - 20) + "px";
+		this.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest + (this.disappeared || ! mobile ? 0 : 200)) + "px";
 
 		this.draw();
 	}
 
 	setState(state) {
 		super.setState(state, () => {
-			this.refs.tooltip.hide();
+			this.tooltip.hide();
 			this.resize();
 		});
 	}
 
 	draw() {
-		const canvas = this.refs.canvas;
+		const canvas = this.canvas;
 		const { canvasWidth, canvasHeight, lines, tMax } = this;
 
 		if(! this.tMax) return;
-		if(! this.refs.canvas) return;
+		if(! this.canvas) return;
 
 		canvas.width = canvasWidth * imgScale;
 		canvas.height = canvasHeight * imgScale;
