@@ -52,6 +52,7 @@ const records = [
 	["#64320f", ["d"]]
 ];
 
+let isPortrait;
 let reg = 0;
 let shift;
 let x2t = () => 0;
@@ -94,7 +95,7 @@ class ToolTip extends Component {
 		const error = 100 * ["h", "p", "b"].reduce((avg, stat) => avg + single(stat), 0);
 
 		return (
-			<div className="Table" style={{ display, left, top }}>
+			<div className="Table" style={{ display, left, top }} onMouseMove={() => this.hide()}>
 				<div className="TRow">
 					<div className="TCellL">{dict.day[language]}:</div>
 					<div className="TCellR">{date}</div>
@@ -130,11 +131,18 @@ class ToolTip extends Component {
 
 		state.display = "table";
 
-		if(y > 217) {
-			state.left = (x > 198 ? x - 198 : 0) + "px";
-			state.top = y - 217 + "px";
+		const distance = mobile ? 50 : 5;
+		const sizeX = 193 + distance;
+		const sizeY = 212 + distance;
+
+		if(y > sizeY) {
+			state.left = (x > sizeX ? x - sizeX : 0) + "px";
+			state.top = y - sizeY + "px";
+		} else if(mobile && isPortrait && x <= sizeX) {
+			state.left = "0px";
+			state.top = y + distance + "px";
 		} else {
-			state.left = x + (x > 198 ? -198 : 5) + "px";
+			state.left = x + (x > sizeX ? -sizeX : distance) + "px";
 			state.top = "0px";
 		}
 
@@ -149,7 +157,7 @@ class Advanced extends Component {
 		this.state = {};
 		this.viewportHeight = window.innerHeight;
 		this.viewportWidth = window.innerWidth;
-		this.isPortrait = this.viewportHeight > this.viewportWidth;
+		isPortrait = this.viewportHeight > this.viewportWidth;
 	}
 
 	componentDidMount() {
@@ -205,39 +213,25 @@ class Advanced extends Component {
 	handleMouseMove(event) {
 		if(mobile) return;
 
-		let mouseX = 0;
-		let mouseY = 0;
-		let elementX = 0;
-		let elementY = 0;
-		let element = event.target;
+		this.handleToolTip(event);
+	}
 
-		if(! event) event = window.event;
-		if(event.pageX || event.pageY) {
-			mouseX = event.pageX;
-			mouseY = event.pageY;
-		} else if(event.clientX || event.clientY) {
-			mouseX = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-			mouseY = event.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-		}
+	handleToolTip(event) {
+		const { clientX, clientY, target } = event;
+		const rect = target.getBoundingClientRect();
 
-		if(element.offsetParent) {
-			do {
-				elementX += element.offsetLeft;
-				elementY += element.offsetTop;
-			} while((element = element.offsetParent));
-		}
-
-		const relativeX = mouseX - elementX;
-		const relativeY = mouseY - elementY;
-
-		this.tooltip.setState({ day: x2t(relativeX), units: y2units(relativeY), x: mouseX, y: mouseY });
+		this.tooltip.setState({ day: x2t(clientX - rect.left), units: y2units(clientY - rect.top), x: clientX, y: clientY });
 	}
 
 	handleTouchEnd(event) {}
 
-	handleTouchMove(event) {}
+	handleTouchMove(event) {
+		this.handleToolTip(event.touches[0], true);
+	}
 
-	handleTouchStart(event) {}
+	handleTouchStart(event) {
+		this.handleToolTip(event.touches[0], true);
+	}
 
 	render() {
 		const { language, region } = this.props;
@@ -269,19 +263,21 @@ class Advanced extends Component {
 	resize() {
 		const newViewportHeight = window.innerHeight;
 		const newViewportWidth = window.innerWidth;
-		const isPortrait = newViewportHeight > newViewportWidth;
+		const newIsPortrait = newViewportHeight > newViewportWidth;
 		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight; // + document.getElementById("tip").clientHeight;
 
 		if(mobile) {
-			if(isPortrait !== this.isPortrait) window.location.reload();
+			if(newIsPortrait !== isPortrait) window.location.reload();
 			if(this.disappeared) return;
-			if(newViewportHeight > this.viewportHeight) this.disappeared = true;
-			//this.canvas.style.touchAction = "none";
+			if(newViewportHeight > this.viewportHeight) {
+				this.disappeared = true;
+				this.canvas.style.touchAction = "none";
+			}
 		}
 
 		this.viewportHeight = newViewportHeight;
 		this.viewportWidth = newViewportWidth;
-		this.isPortrait = this.viewportHeight > this.viewportWidth;
+		isPortrait = this.viewportHeight > this.viewportWidth;
 
 		if(this.state.error) return;
 
