@@ -1,6 +1,5 @@
 import React, { Component } from "react";
-import { withRouter } from "react-router";
-import Option from "./Option";
+import { Link } from "react-router-dom";
 
 let sticky;
 
@@ -34,12 +33,11 @@ class Header extends Component {
 					<p>previsioni andamento</p>
 				</div>
 				<div className="Header" id="Header">
-					Grafici a <Option enabled={true} desc="linee" onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni")} style={{ fontSize: "26px" }} /> e ad{" "}
-					<Option enabled={true} desc="erea" onClick={() => this.props.history.push("/coronavirus/grafico/proiezioni/andamento")} style={{ fontSize: "26px" }} />
+					Grafici: a <Link to="/coronavirus/grafico/proiezioni">linee</Link> - ad <Link to="/coronavirus/grafico/proiezioni/andamento">area</Link>
 				</div>
 			</div>
 		);
 	}
 }
 
-export default withRouter(Header);
+export default Header;
