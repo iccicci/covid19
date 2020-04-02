@@ -224,7 +224,7 @@ class Advanced extends Component {
 
 		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
 
-		this.tooltip.setState({ day: x2t(offsetX), units: y2units(offsetY), x: clientX, y: clientY });
+		this.tooltip.setState({ day: x2t(offsetX) + 1, units: y2units(offsetY), x: clientX, y: clientY });
 	}
 
 	handleTouchEnd(event) {}
@@ -383,6 +383,7 @@ class Advanced extends Component {
 		records.forEach(([color, adds]) => {
 			const sum = day => adds.reduce((tot, stat) => tot + prociv[reg].data[day][stat], 0);
 
+			ctx.lineWidth = 2;
 			ctx.strokeStyle = color;
 			ctx.beginPath();
 			ctx.moveTo(x2Canvas(6), y2Canvas(sum(6)));
