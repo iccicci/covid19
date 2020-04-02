@@ -21,6 +21,7 @@ export const stats = {
 	t: { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi" }
 };
 
+export const checkExclude = false;
 export const date2day = {};
 export const day2date = [];
 export const prociv = [];

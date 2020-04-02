@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
-import { day2date, getData, groups, prociv, procivc, refresh, stats } from "./definitions";
+import { checkExclude, day2date, getData, groups, prociv, procivc, refresh, stats } from "./definitions";
 import { gauss2, gaussChart } from "./gauss";
 import regression from "regression";
 
@@ -148,6 +148,31 @@ class Chart extends Component {
 	}
 
 	componentDidMount() {
+		if(checkExclude) {
+			let current = -1;
+
+			this.keyEvent = event => {
+				const { keyCode } = event;
+
+				let forecast;
+
+				if(keyCode === 38) {
+					if(current <= 0) return;
+					forecast = this.checks[--current];
+				} else
+				if(keyCode === 40) {
+					if(current === this.checks.length - 1) return;
+					forecast = this.checks[++current];
+				} else return;
+
+				this.setState({ f: [forecast] });
+				this.calculateForecasts(this.state.l);
+				console.log(forecast);
+			};
+
+			document.addEventListener("keydown", this.keyEvent);
+		}
+
 		const { hash, origin } = window.location;
 
 		this.origin = origin + `/coronavirus/grafico/proiezioni${this.props.surface ? "/andamento" : ""}#`;
@@ -159,6 +184,8 @@ class Chart extends Component {
 		}
 
 		refresh(() => {
+			if(checkExclude) this.checks = Object.keys(stats).filter(s => s !== "t").reduce((ret, s) => [...ret, ...prociv.map((e, r) => ({ r, s }))], []);
+
 			this.regionsItems = [...prociv]
 				.sort((a, b) => (a.code === 0 ? -1 : b.code === 0 ? 1 : a.name < b.name ? -1 : 1))
 				.map(region => (
@@ -195,6 +222,13 @@ class Chart extends Component {
 		});
 	}
 
+	componentWillUnmount() {
+		if(this.keyEvent) {
+			document.addEventListener("keydown", this.keyEvent);
+			this.keyEvent = null;
+		}
+	}
+
 	render() {
 		if(! prociv[0]) return <div className="App" />;
 
@@ -228,8 +262,7 @@ class Chart extends Component {
 						<OptionLink desc="home" to="/" />
 						{l === "i" ? " - grafico: " : " - chart: "}
 						<OptionLink desc={l === "i" ? "linee" : "lines"} disabled={this.props.surface} to="/coronavirus/grafico/proiezioni" />{" "}
-						<OptionLink desc={l === "i" ? "area" : "surface"} disabled={! this.props.surface} to="/coronavirus/grafico/proiezioni/andamento" /> -
-						{l === "i" ? " lingua" : " language"}:
+						<OptionLink desc={l === "i" ? "area" : "surface"} disabled={! this.props.surface} to="/coronavirus/grafico/proiezioni/andamento" /> -{l === "i" ? " lingua" : " language"}:
 						<Option enabled={l === "e"} desc="english" onClick={() => this.calculateForecasts("e")} />
 						<Option enabled={l === "i"} desc="italiano" onClick={() => this.calculateForecasts("i")} />
 						{l === "i" ? "  -  regione: " : "  -  region: "}

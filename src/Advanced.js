@@ -218,8 +218,12 @@ class Advanced extends Component {
 	handleToolTip(event) {
 		const { clientX, clientY, target } = event;
 		const rect = target.getBoundingClientRect();
+		const offsetX = clientX - rect.left;
+		const offsetY = clientY - rect.top;
 
-		this.tooltip.setState({ day: x2t(clientX - rect.left), units: y2units(clientY - rect.top), x: clientX, y: clientY });
+		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
+
+		this.tooltip.setState({ day: x2t(offsetX) + 1, units: y2units(offsetY), x: clientX, y: clientY });
 	}
 
 	handleTouchEnd(event) {}
@@ -376,6 +380,7 @@ class Advanced extends Component {
 		records.forEach(([color, adds]) => {
 			const sum = day => adds.reduce((tot, stat) => tot + prociv[region].data[day][stat], 0);
 
+			ctx.lineWidth = 2;
 			ctx.strokeStyle = color;
 			ctx.beginPath();
 			ctx.moveTo(x2Canvas(6), y2Canvas(sum(6)));
