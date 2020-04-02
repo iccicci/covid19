@@ -53,7 +53,6 @@ const records = [
 ];
 
 let isPortrait;
-let reg = 0;
 let shift;
 let x2t = () => 0;
 let y2units = () => 0;
@@ -74,17 +73,17 @@ class ToolTip extends Component {
 	}
 
 	render() {
-		const { language } = this.props;
+		const { language, region } = this.props;
 		const { day, display, left, units, top } = this.state;
 		const forecasts = {};
 		const functions = {};
 		const record = {};
 		const date = new Date(2020, 1, 18 + day, 3).toISOString().substr(5, 5);
 
-		if(prociv[reg].data[day]) Object.keys(lines).forEach(stat => (record[stat] = prociv[reg].data[day][stat]));
+		if(prociv[region].data[day]) Object.keys(lines).forEach(stat => (record[stat] = prociv[region].data[day][stat]));
 
 		relevant.forEach(stat => {
-			if(prociv[reg].data[day]) record[stat] = prociv[reg].data[day][stat];
+			if(prociv[region].data[day]) record[stat] = prociv[region].data[day][stat];
 			forecasts[stat] = functions[stat] = Math.floor(lines[stat].f(day));
 			if(stat === "h") forecasts.h = forecasts.c - forecasts.d - forecasts.p;
 			if(stat === "p") forecasts.p = forecasts.a + forecasts.b;
@@ -234,9 +233,7 @@ class Advanced extends Component {
 	}
 
 	render() {
-		const { language, region } = this.props;
-
-		reg = region;
+		const { language, region } =    this.props;
 
 		return (
 			<div>
@@ -254,7 +251,7 @@ class Advanced extends Component {
 							onTouchStart={event => this.handleTouchStart(event)}
 						/>
 					)}
-					<ToolTip language={language} ref={ref => (this.tooltip = ref)} />
+					<ToolTip language={language} ref={ref => (this.tooltip = ref)} region={region} />
 				</div>
 			</div>
 		);
@@ -295,8 +292,8 @@ class Advanced extends Component {
 	}
 
 	draw() {
-		const canvas = this.canvas;
-		const { canvasWidth, canvasHeight, lines, tMax } = this;
+		const { canvas, canvasWidth, canvasHeight, lines, tMax } = this;
+		const { region } = this.props;
 
 		if(! this.tMax) return;
 		if(! this.canvas) return;
@@ -377,12 +374,12 @@ class Advanced extends Component {
 
 		ctx.lineWidth = "1";
 		records.forEach(([color, adds]) => {
-			const sum = day => adds.reduce((tot, stat) => tot + prociv[reg].data[day][stat], 0);
+			const sum = day => adds.reduce((tot, stat) => tot + prociv[region].data[day][stat], 0);
 
 			ctx.strokeStyle = color;
 			ctx.beginPath();
 			ctx.moveTo(x2Canvas(6), y2Canvas(sum(6)));
-			prociv[reg].data.forEach((e, i) => (i > 6 ? ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))) : null));
+			prociv[region].data.forEach((e, i) => (i > 6 ? ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))) : null));
 			ctx.stroke();
 		});
 
