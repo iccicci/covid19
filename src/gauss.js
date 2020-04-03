@@ -1,5 +1,5 @@
 import { Matrix, pseudoInverse } from "ml-matrix";
-import { day2date, fill, prociv, stats } from "./definitions";
+import { checkExclude, day2date, fill, prociv, stats } from "./definitions";
 import erf from "math-erf";
 
 const { PI, ceil, exp, sqrt, SQRT2 } = Math;
@@ -25,7 +25,7 @@ const models = {
 		beta0: data => {
 			const ret = guess(data);
 
-			return [ret[0] * 10, 40, 10];
+			return [[ret[0] * 10, 40, 10]];
 		},
 		d: [
 			([, b, c]) => t => ((t - b) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c ** 2,
@@ -36,8 +36,12 @@ const models = {
 		tMax: ([, b]) => 2 * b - 6
 	},
 	gauss: {
-		beta0: guess,
-		d:     [
+		beta0: data => {
+			const ret = guess(data);
+
+			return [ret];
+		},
+		d: [
 			([, b, c]) => t => -exp(-((t - b) ** 2 / (2 * c ** 2))),
 			([a, b, c]) => t => -(((a * 4) / (2 * c ** 2) ** 2) * (t - b) * c ** 2 * exp(-((t - b) ** 2 / (2 * c ** 2)))),
 			([a, b, c]) => t => -(((a * 4) / (2 * c ** 2) ** 2) * (t - b) ** 2 * c * exp(-((t - b) ** 2 / (2 * c ** 2))))
@@ -49,7 +53,7 @@ const models = {
 		beta0: data => {
 			const ret = guess(data);
 
-			return [ret[0] / 10, ret[1], ret[2], ret[0]];
+			return [[ret[0] / 10, ret[1], ret[2], ret[0] / 2], [ret[0] / 10, ret[1] - 5, 3, ret[0] / 2], [ret[0] / 20, ret[1] - 10, ret[2], ret[0] / 2]];
 		},
 		d: [
 			([, b, c]) => t => SQRTPI2 * c * erf((b - t) / (SQRT2 * c)),
@@ -62,70 +66,92 @@ const models = {
 	}
 };
 
-export function gauss(data, model, ita) {
-	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
-	const fs = [];
-	const m = models[model];
-	const ret = [];
-	const rounds = 8;
+const rounds = 8;
+
+export function gauss(data, stat, region, city) {
+	if(! checkExclude) {
+		if(city === 59) throw new Error("Exclude Latina");
+		if(city === 80) throw new Error("Exclude Reggio Calabria");
+	}
+
+	const m = models[stats[stat].model];
 	const t = data.map(([t]) => t);
 
-	let beta = m.beta0(data);
-	let tMax = 0;
-	let Srp = 1e20;
-	let Sr2p = 1e20;
+	let betas = m.beta0(data);
+	//let Srp = 1e20;
+	//let Sr2p = 1e20;
 
-	console.log("data", data);
+	for(let beta of betas) {
+		const fs = [];
+		const rows = data.length;
+		const cols = beta.length;
 
-	const rows = data.length;
-	const cols = beta.length;
+		if(checkExclude) console.log("beta0", beta);
 
-	for(let s = 0; s < rounds; ++s) {
-		const f = m.f(beta);
-		const tmax = ceil(m.tMax(beta));
+		try {
+			for(let s = 0; s < rounds; ++s) {
+				const f = m.f(beta);
 
-		if(tmax > tMax) tMax = tmax;
-		if(tMax > 100) tMax = 100;
-		fs[s] = f;
+				fs[s] = f;
 
-		const r = Matrix.columnVector(data.map(([t, y]) => y - f(t)));
-		const Jrjs = [];
-		const Sr = r.data.map(e => e[0]).reduce((t, e) => t + e, 0);
-		const Sr2 = r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0);
+				const r = Matrix.columnVector(data.map(([t, y]) => y - f(t)));
+				const Jrjs = [];
+				//const Sr = r.data.map(e => e[0]).reduce((t, e) => t + e, 0);
+				//const Sr2 = r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0);
 
-		console.log(`beta${s}`, beta);
-		console.log(`r${s}`, r);
-		console.log(`Sr${s}`, Sr, Srp - Sr);
-		console.log(`Sr2${s}`, Sr2, Sr2p - Sr2);
+				//console.log(`beta${s}`, beta);
+				//console.log(`r${s}`, r);
+				//console.log(`Sr${s}`, Sr, Srp - Sr);
+				//console.log(`Sr2${s}`, Sr2, Sr2p - Sr2);
 
-		Srp = Sr;
-		Sr2p = Sr2;
+				//Srp = Sr;
+				//Sr2p = Sr2;
 
-		if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
+				if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
 
-		const d = [];
+				const d = [];
 
-		for(let j = 0; j < cols; ++j) d[j] = m.d[j](beta);
+				for(let j = 0; j < cols; ++j) d[j] = m.d[j](beta);
 
-		for(let i = 0; i < rows; ++i) {
-			const row = [];
+				for(let i = 0; i < rows; ++i) {
+					const row = [];
 
-			for(let j = 0; j < cols; ++j) row.push(d[j](t[i]));
+					for(let j = 0; j < cols; ++j) row.push(d[j](t[i]));
 
-			Jrjs.push(row);
-		}
+					Jrjs.push(row);
+				}
 
-		const Jr = new Matrix(Jrjs);
+				const Jr = new Matrix(Jrjs);
 
-		console.log(`Jr${s}`, Jr);
+				//console.log(`Jr${s}`, Jr);
 
-		const Beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(Jr).mmul(r));
+				const Beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(Jr).mmul(r));
 
-		beta = Beta.data.map(e => e[0]);
+				beta = Beta.data.map(e => e[0]);
 
-		if(beta[1] < 0) throw new Error("Negative peak");
-		if(beta[1] > 1000) throw new Error("Lost peak");
+				if(beta[0] < 0) throw new Error("Negative variance");
+				if(beta[1] < 0) throw new Error("Negative peak");
+				if(beta[1] > 1000) throw new Error("Lost peak");
+			}
+
+			if(checkExclude) {
+				console.log(
+					"beta7",
+					beta.map(e => Math.round(e * 100) / 100)
+				);
+			}
+
+			return { fs, tMax: ceil(m.tMax(beta)) };
+		} catch(e) {}
 	}
+
+	throw new Error("no");
+}
+
+export function gaussChart(data, stat, region, city, language) {
+	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
+	const ret = [];
+	const { fs, tMax } = gauss(data, stat, region, city);
 
 	fill(tMax);
 
@@ -138,14 +164,16 @@ export function gauss(data, model, ita) {
 
 		ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}` });
 	}
+
+	return ret;
 	*/
 
 	const dataPoints = [];
 	let f = fs[7];
 
-	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
+	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: Math.round(f(t)) });
 
-	ret.push({ color: colors[7], dataPoints, legendText: ita ? "proiezione" : "forecast" });
+	ret.push({ color: colors[7], dataPoints, legendText: language === "i" ? "proiezione" : "forecast" });
 
 	return ret;
 }
@@ -170,7 +198,7 @@ const all = Object.keys(functions).sort();
 // prettier-ignore
 const base = Object.entries(functions).filter(([, fun]) => fun.model).map(e => e[0]).sort((a, b) => a < b);
 
-export function gauss2(ita) {
+export function gauss2() {
 	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
 	const fs = [];
 	const lines = {};
@@ -207,7 +235,7 @@ export function gauss2(ita) {
 	base.forEach(s => (beta = [...beta, ...lines[s].beta]));
 
 	for(let step = 0; step < steps; ++step) {
-		const Step = step;
+		//const Step = step;
 
 		fs[step] = {};
 
@@ -331,7 +359,7 @@ export function gauss2(ita) {
 	for(let t = 6; t <= tMax; ++t) data.push([t, fs[7].h(t)]);
 	console.log("prova", data);
 	try {
-		gauss(data, "integral", ita);
+		gauss(data, "integral");
 	} catch(e) {}
 	*/
 
