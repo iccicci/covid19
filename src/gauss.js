@@ -1,5 +1,5 @@
 import { Matrix, pseudoInverse } from "ml-matrix";
-import { checkExclude, day2date, fill, prociv, stats } from "./definitions";
+import { checkExclude, day2date, prociv, stats } from "./definitions";
 import erf from "math-erf";
 
 const { PI, ceil, exp, sqrt, SQRT2 } = Math;
@@ -53,7 +53,11 @@ const models = {
 		beta0: data => {
 			const ret = guess(data);
 
-			return [[ret[0] / 10, ret[1], ret[2], ret[0] / 2], [ret[0] / 10, ret[1] - 5, 3, ret[0] / 2], [ret[0] / 20, ret[1] - 10, ret[2], ret[0] / 2]];
+			return [
+				[ret[0] / 10, ret[1], ret[2], ret[0] / 2],
+				[ret[0] / 10, ret[1] - 5, 3, ret[0] / 2],
+				[ret[0] / 20, ret[1] - 10, ret[2], ret[0] / 2]
+			];
 		},
 		d: [
 			([, b, c]) => t => SQRTPI2 * c * erf((b - t) / (SQRT2 * c)),
@@ -152,8 +156,6 @@ export function gaussChart(data, stat, region, city, language) {
 	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
 	const ret = [];
 	const { fs, tMax } = gauss(data, stat, region, city);
-
-	fill(tMax);
 
 	/*
 	for(let s = 0; s < rounds; ++s) {
@@ -329,7 +331,6 @@ export function gauss2() {
 
 	console.log("tMax", tMax);
 	if(tMax > 100) tMax = 100;
-	fill(tMax);
 
 	for(let step = 0; step < steps; ++step) {
 		// eslint-disable-next-line no-loop-func

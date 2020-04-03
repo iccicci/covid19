@@ -1,6 +1,7 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
-function Option(props) {
+export function Option(props) {
 	return (
 		<button className={props.enabled ? "EnabledOption" : "DisabledOption"} onClick={props.onClick} style={props.style}>
 			{props.desc}
@@ -8,4 +9,14 @@ function Option(props) {
 	);
 }
 
-export default Option;
+function toggleClass(event) {
+	event.target.classList.toggle("NoDecoration");
+}
+
+export function OptionLink({ desc, disabled, to }) {
+	return (
+		<Link to={to} onMouseOut={toggleClass} onMouseOver={toggleClass} style={disabled ? { color: "gray" } : {}}>
+			{desc}
+		</Link>
+	);
+}

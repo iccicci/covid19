@@ -26,37 +26,24 @@ export const date2day = {};
 export const day2date = [];
 export const prociv = [];
 export const procivc = [];
+export const records = [];
+export const statsEntries = Object.entries(stats);
+export const statsKeys = Object.keys(stats);
 
-let i = 0;
-let missing = 7;
-let today = new Date();
+function format(n) {
+	return n > 9 ? n : "0" + n;
+}
 
-while(missing) {
-	let date = new Date(2020, 1, 18 + i, 3);
-	let day = date.toISOString().substr(0, 10);
+for(let i = 0; i < 300; ++i) {
+	let date = new Date(2020, 1, 18 + i, 0, 1);
+	let day = `${date.getFullYear()}-${format(date.getMonth() + 1)}-${format(date.getDate())}`;
 
 	date2day[day] = i;
 	day2date[i] = date;
-
-	i++;
-	if(date > today) missing--;
 }
 
 export function getData(stat, region, city) {
 	return (city ? procivc[region][city].data.map((e, i) => [i, e[stat]]) : prociv[region].data.map((e, i) => [i, e[stat]])).filter((e, i) => i > 5);
-}
-
-export function fill(max) {
-	if(day2date[max]) return day2date[max];
-
-	const prev = fill(max - 1);
-	const date = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1, 3);
-	const day = date.toISOString().substr(0, 10);
-
-	date2day[day] = max;
-	day2date[max] = date;
-
-	return date;
 }
 
 function fromSource(source, city) {
@@ -78,18 +65,61 @@ function fromSource(source, city) {
 	return ret;
 }
 
+function fromSource2(source) {
+	const { codice_provincia, codice_regione, data, denominazione_provincia, denominazione_regione, sigla_provincia } = source;
+
+	const city = codice_provincia;
+	const day = date2day[data.substr(0, 10)];
+	const name = codice_provincia ? `${denominazione_provincia} (${sigla_provincia})` : denominazione_regione;
+	const region = denominazione_regione === "P.A. Bolzano" ? 21 : codice_regione;
+
+	return { city, day, name, region };
+}
+
+function initSet() {
+	const set = {};
+
+	statsKeys.map(stat => (set[stat] = []));
+
+	return set;
+}
+
 export function refresh(done) {
+	const built = [];
+
 	setTimeout(() => refresh(done), 600000);
 
 	fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
 		.then(res => res.json())
 		.then(res => {
+			const set = initSet();
+
+			built[0] = [{ name: "Italia", set }];
+
+			res.forEach(e => {
+				const day = date2day[e.data.substr(0, 10)];
+
+				statsEntries.forEach(([stat, details]) => (set[stat][day] = e[details.source]));
+			});
+
 			prociv[0] = { code: 0, data: [], name: "Italia" };
 			res.map(e => (prociv[0].data[date2day[e.data.substr(0, 10)]] = fromSource(e).data));
 
 			fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-regioni.json")
 				.then(res => res.json())
 				.then(res => {
+					res.forEach(e => {
+						const { day, name, region } = fromSource2(e);
+
+						if(! built[region]) {
+							const set = initSet();
+
+							built[region] = [{ name, set }];
+						}
+
+						statsEntries.forEach(([stat, details]) => (built[region][0].set[stat][day] = e[details.source]));
+					});
+
 					res.map(e => {
 						const { code, data, name } = fromSource(e);
 
@@ -101,6 +131,16 @@ export function refresh(done) {
 					fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json")
 						.then(res => res.json())
 						.then(res => {
+							res.forEach(e => {
+								if(! e.sigla_provincia) return;
+
+								const { city, day, name, region } = fromSource2(e);
+
+								if(! built[region][city]) built[region][city] = { name, set: { c: [] } };
+
+								built[region][city].set.c[day] = e[stats.c.source];
+							});
+
 							res.map(e => {
 								if(! e.sigla_provincia) return 0;
 

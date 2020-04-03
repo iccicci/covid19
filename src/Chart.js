@@ -1,13 +1,12 @@
 import React, { Component } from "react";
-import { Link } from "react-router-dom";
 import { compressToBase64, decompressFromBase64 } from "./lz-string";
 import { checkExclude, day2date, getData, groups, prociv, procivc, refresh, stats } from "./definitions";
+import { Option, OptionLink } from "./Option";
 import { gauss2, gaussChart } from "./gauss";
 import regression from "regression";
 
 import CanvasJSReact from "./canvasjs.react";
 import Advanced from "./Advanced";
-import Option from "./Option";
 
 const regressions = [
 	{ filter: () => 1, func: "linear", legend: { i: "lineare", e: "linear" }, order: {} },
@@ -101,15 +100,11 @@ class Chart extends Component {
 		if(s === "cc" && r === 0) {
 			try {
 				flines = gauss2();
-			} catch(e) {
-				console.log(e);
-			}
+			} catch(e) {}
 		} else if(stats[s].model) {
 			try {
 				flines = gaussChart(data, s, r, w, l);
-			} catch(e) {
-				console.log(e);
-			}
+			} catch(e) {}
 		}
 
 		if(! flines) {
@@ -159,15 +154,13 @@ class Chart extends Component {
 				if(keyCode === 38) {
 					if(current <= 0) return;
 					forecast = this.checks[--current];
-				} else
-				if(keyCode === 40) {
+				} else if(keyCode === 40) {
 					if(current === this.checks.length - 1) return;
 					forecast = this.checks[++current];
 				} else return;
 
 				this.setState({ f: [forecast] });
 				this.calculateForecasts(this.state.l);
-				console.log(forecast);
 			};
 
 			document.addEventListener("keydown", this.keyEvent);
@@ -184,7 +177,11 @@ class Chart extends Component {
 		}
 
 		refresh(() => {
-			if(checkExclude) this.checks = Object.keys(stats).filter(s => s !== "t").reduce((ret, s) => [...ret, ...prociv.map((e, r) => ({ r, s }))], []);
+			if(checkExclude) {
+				this.checks = Object.keys(stats)
+					.filter(s => s !== "t")
+					.reduce((ret, s) => [...ret, ...prociv.map((e, r) => ({ r, s }))], []);
+			}
 
 			this.regionsItems = [...prociv]
 				.sort((a, b) => (a.code === 0 ? -1 : b.code === 0 ? 1 : a.name < b.name ? -1 : 1))
@@ -248,12 +245,6 @@ class Chart extends Component {
 		};
 
 		window.history.pushState({}, null, this.origin + compressToBase64(JSON.stringify(this.state)));
-		const toggleClass = event => event.target.classList.toggle("NoDecoration");
-		const OptionLink = ({ desc, disabled, to }) => (
-			<Link to={to} onMouseOut={toggleClass} onMouseOver={toggleClass} style={disabled ? { color: "gray" } : {}}>
-				{desc}
-			</Link>
-		);
 
 		return (
 			<div className="App">
