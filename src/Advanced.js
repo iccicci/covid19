@@ -94,7 +94,7 @@ class ToolTip extends Component {
 		const error = 100 * ["h", "p", "b"].reduce((avg, stat) => avg + single(stat), 0);
 
 		return (
-			<div className="Table" style={{ display, left, top }} onMouseMove={() => this.hide()}>
+			<div className="Table" style={{ display, left, top }} onTouchStart={event => this.hide()}>
 				<div className="TRow">
 					<div className="TCellL">{dict.day[language]}:</div>
 					<div className="TCellR">{date}</div>
@@ -212,7 +212,15 @@ class Advanced extends Component {
 	handleMouseMove(event) {
 		if(mobile) return;
 
+		if(this.hideTimeout) clearTimeout(this.hideTimeout);
+
 		this.handleToolTip(event);
+	}
+
+	handleMouseOut() {
+		if(this.hideTimeout) clearTimeout(this.hideTimeout);
+
+		this.hideTimeout = setTimeout(() => this.tooltip.hide((this.hideTimeout = null)), 300);
 	}
 
 	handleToolTip(event) {
@@ -249,7 +257,7 @@ class Advanced extends Component {
 						<canvas
 							ref={ref => (this.canvas = ref)}
 							onMouseMove={event => this.handleMouseMove(event)}
-							onMouseOut={() => this.tooltip.hide()}
+							onMouseOut={event => this.handleMouseOut(event)}
 							onTouchEnd={event => this.handleTouchEnd(event)}
 							onTouchMove={event => this.handleTouchMove(event)}
 							onTouchStart={event => this.handleTouchStart(event)}
