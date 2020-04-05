@@ -18,13 +18,15 @@ window.addEventListener("scroll", () => {
 	else content.style.paddingTop = "10px";
 });
 
-class Header extends Component {
+export class Header extends Component {
 	componentDidMount() {
 		sticky = document.getElementById("Header").offsetTop;
 		document.getElementById("Content").style.paddingTop = "10px";
 	}
 
 	render() {
+		const path = window.location.pathname === "/" ? "" : window.location.pathname;
+
 		return (
 			<div>
 				<div className="Welcome">
@@ -33,11 +35,9 @@ class Header extends Component {
 					<p>previsioni andamento</p>
 				</div>
 				<div className="Header" id="Header">
-					Grafici: a <Link to="/coronavirus/grafico/proiezioni">linee</Link> - ad <Link to="/coronavirus/grafico/proiezioni/andamento">area</Link>
+					Grafici: a <Link to={"/coronavirus/grafico/proiezioni" + path}>linee</Link> - ad <Link to={"/coronavirus/grafico/proiezioni/andamento" + path}>area</Link>
 				</div>
 			</div>
 		);
 	}
 }
-
-export default Header;

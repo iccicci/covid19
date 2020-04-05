@@ -1,9 +1,23 @@
 import { Matrix, pseudoInverse } from "ml-matrix";
-import { checkExclude, day2date, prociv, stats } from "./definitions";
+import { checkExclude, day2date, getData, prociv, registerSchemaHandle, stats, schema } from "./schema";
 import erf from "math-erf";
+import regression from "regression";
 
 const { PI, ceil, exp, sqrt, SQRT2 } = Math;
 const SQRTPI2 = sqrt(PI / 2);
+const regressionsHandles = {};
+const regressionsHandlesMap = [];
+const regressionColors = ["#000000", "#505050", "#a0a0a0"];
+
+const regressions = [
+	{ filter: () => 1, func: "linear", legend: { i: "lineare", e: "linear" }, order: {} },
+	{ filter: e => e[1], func: "exponential", legend: { i: "esponenziale", e: "exponential" }, order: {} },
+	{ filter: e => e[1], func: "power", legend: { i: "potenza", e: "power" }, order: {} },
+	{ filter: () => 1, func: "polynomial", legend: { i: "polinomiale 2°", e: "polynomial 2rd" }, order: { order: 2 } },
+	{ filter: () => 1, func: "polynomial", legend: { i: "polinomiale 3°", e: "polynomial 3rd" }, order: { order: 3 } }
+];
+
+let lastDay;
 
 function guess(data) {
 	let a = 0;
@@ -80,6 +94,7 @@ export function gauss(data, stat, region, city) {
 
 	const m = models[stats[stat].model];
 	const t = data.map(([t]) => t);
+	const beta0 = m.beta0(data);
 
 	let betas = m.beta0(data);
 	//let Srp = 1e20;
@@ -89,8 +104,6 @@ export function gauss(data, stat, region, city) {
 		const fs = [];
 		const rows = data.length;
 		const cols = beta.length;
-
-		if(checkExclude) console.log("beta0", beta);
 
 		try {
 			for(let s = 0; s < rounds; ++s) {
@@ -138,24 +151,17 @@ export function gauss(data, stat, region, city) {
 				if(beta[1] > 1000) throw new Error("Lost peak");
 			}
 
-			if(checkExclude) {
-				console.log(
-					"beta7",
-					beta.map(e => Math.round(e * 100) / 100)
-				);
-			}
-
-			return { fs, tMax: ceil(m.tMax(beta)) };
+			return { beta: beta.map(e => Math.round(e * 100) / 100), beta0, fs, tMax: ceil(m.tMax(beta)) };
 		} catch(e) {}
 	}
 
 	throw new Error("no");
 }
 
-export function gaussChart(data, stat, region, city, language) {
+export function gaussChart(data, stat, region, city) {
 	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
 	const ret = [];
-	const { fs, tMax } = gauss(data, stat, region, city);
+	const { beta, beta0, fs, tMax } = gauss(data, stat, region, city);
 
 	/*
 	for(let s = 0; s < rounds; ++s) {
@@ -175,7 +181,11 @@ export function gaussChart(data, stat, region, city, language) {
 
 	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: Math.round(f(t)) });
 
-	ret.push({ color: colors[7], dataPoints, legendText: language === "i" ? "proiezione" : "forecast" });
+	const line = { beta, beta0, color: colors[7], dataPoints };
+
+	line.legend = language => (line.legendText = language === "i" ? "proiezione" : "forecast");
+
+	ret.push(line);
 
 	return ret;
 }
@@ -366,3 +376,97 @@ export function gauss2() {
 
 	return ret;
 }
+
+export function registerForecastsHandle(region, city, handle) {
+	const key = Math.random();
+
+	if(schema[region] && schema[region][city].forecasts.cases) handle();
+	if(! regressionsHandlesMap[region]) regressionsHandlesMap[region] = {};
+	if(! regressionsHandlesMap[region][city]) regressionsHandlesMap[region][city] = {};
+	regressionsHandlesMap[region][city][key] = handle;
+	regressionsHandles[key] = { city, region };
+
+	return key;
+}
+
+export function unregisterForecastsHandle(key) {
+	const { city, region } = regressionsHandles[key];
+
+	delete regressionsHandlesMap[region][city][key];
+	delete regressionsHandles[key];
+}
+
+function calculateForecasts(region, entry, entries) {
+	if(entry === entries.length) {
+		region++;
+
+		if(region === schema.length) return;
+
+		return calculateForecasts(region, 0, Object.entries(schema[region]));
+	}
+
+	const city = entries[entry][0];
+
+	Object.keys(stats).forEach(stat => {
+		if(stat !== "cases" && city !== "0") return;
+
+		const data = getData(stat, region, city);
+
+		let chart;
+		let model;
+
+		if(stats[stat].model) {
+			try {
+				const { beta, beta0, fs, tMax } = gauss(data, stat, region, city);
+				chart = gaussChart(data, stat, region, city);
+				model = { beta, beta0, f: fs[7], tMax };
+			} catch(e) {}
+		}
+
+		if(! chart) {
+			chart = regressions
+				.map(f => {
+					const res = regression[f.func](data.filter(f.filter), { ...f.order, precision: 3 });
+					const { equation, points, predict, r2 } = res;
+
+					for(let i = 1; i <= 7; ++i) points.push(predict(lastDay + i));
+
+					const ret = { dataPoints: points.map(e => ({ x: day2date[e[0]], y: e[1] })), r2 };
+
+					ret.legend = language => (ret.legendText = `${f.legend[language]} ${f.func === "power" ? equation[1] : ""} r2: ${r2}`);
+
+					return ret;
+				})
+				.filter(e => ! isNaN(e.r2) && e.r2 > 0)
+				.sort((a, b) => (a.r2 < b.r2 ? 1 : -1))
+				.filter((e, i) => i < 3)
+				.map((e, i) => {
+					e.color = regressionColors[i];
+					return e;
+				})
+				.reverse();
+		}
+
+		schema[region][city].forecasts[stat] = { chart, data, model };
+	});
+
+	const handles = (entries, i) => {
+		if(i === entries.length) return;
+
+		if(entries[i][0] in regressionsHandlesMap[region][city]) entries[i][1]();
+
+		setTimeout(() => handles(entries, i + 1), 10);
+	};
+
+	if(regressionsHandlesMap[region] && regressionsHandlesMap[region][city]) handles(Object.entries(regressionsHandlesMap[region][city]), 0);
+
+	setTimeout(() => calculateForecasts(region, entry + 1, entries), 10);
+}
+
+registerSchemaHandle(() => {
+	const arr = schema[0][0].recordset.cases;
+
+	lastDay = arr.lastIndexOf(arr.slice(-1)[0]);
+
+	setTimeout(() => calculateForecasts(0, 0, Object.entries(schema[0])), 20);
+});

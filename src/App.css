@@ -1,7 +1,6 @@
 .App {
 	margin: 10px;
 	text-align: justify;
-	font-size: 14px;
 }
 
 .Content {
@@ -9,7 +8,6 @@
 	padding: 10px;
 	padding-bottom: 50px;
 	text-align: justify;
-	font-size: 14px;
 }
 
 .DisabledOption,
@@ -83,7 +81,7 @@
 .TCellL {
 	display: table-column;
 	float: left;
-	font-size: 14px;
+
 	text-align: right;
 	width: 100px;
 }
@@ -91,7 +89,7 @@
 .TCellR {
 	display: table-column;
 	float: left;
-	font-size: 14px;
+
 	padding-left: 3px;
 	text-align: right;
 	width: 70px;
@@ -115,13 +113,6 @@ a {
 
 a:visited {
 	color: blue;
-}
-
-header {
-	background-color: white;
-	color: black;
-	display: flex;
-	flex-direction: column;
 }
 
 footer {

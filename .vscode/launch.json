@@ -2,14 +2,15 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"type": "node",
+			"name": "Launch Chrome remote-WSL",
 			"request": "launch",
-			"name": "Mocha All",
-			"program": "${workspaceFolder}/node_modules/mocha/bin/mocha",
-			"args": ["--timeout", "999999", "--colors", "${workspaceFolder}/test/*.js"],
-			"console": "integratedTerminal",
-			"internalConsoleOptions": "neverOpen",
-			"protocol": "inspector"
+			"runtimeExecutable": "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+			"sourceMapPathOverrides": {
+				"webpack:///./*": "${webRoot}/*"
+			},
+			"type": "chrome",
+			"url": "http://localhost:3000",
+			"webRoot": "${workspaceFolder}"
 		}
 	]
 }

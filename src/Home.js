@@ -1,11 +1,11 @@
 import React, { Component } from "react";
-import Header from "./Header";
-import Andamento from "./img/Grafico-Proiezioni-Picco-Andamento.jpg";
-import Grafico from "./img/Grafico.jpg";
-import Picco from "./img/Grafico-Proiezioni-Picco.jpg";
-import Proiezioni from "./img/Grafico-Proiezioni.jpg";
+import { Header } from "./Header";
+import Andamento from "./img/Coronavirus-Grafico-Proiezioni-Picco-Andamento.jpg";
+import Grafico from "./img/Coronavirus-Grafico.jpg";
+import Picco from "./img/Coronavirus-Grafico-Proiezioni-Picco.jpg";
+import Proiezioni from "./img/Coronavirus-Grafico-Proiezioni.jpg";
 
-class Home extends Component {
+export class Home extends Component {
 	render() {
 		return (
 			<div>
@@ -103,5 +103,3 @@ class Home extends Component {
 		);
 	}
 }
-
-export default Home;

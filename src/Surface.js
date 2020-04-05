@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 
-import { prociv, getData, stats } from "./definitions";
-import { gauss } from "./gauss";
+import { schema, stats } from "./schema";
+import { registerForecastsHandle, unregisterForecastsHandle } from "./forecasts";
 
 const dict = {
 	data:    { e: "data", i: "dato" },
@@ -31,26 +31,28 @@ const drawYOffset = 20;
 const imgScale = window.devicePixelRatio;
 const lines = {};
 const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
-const relevant = ["a", "c", "d", "i", "s", "b", "p", "h"];
-const rgb = { d: { r: 200, g: 100, b: 30 }, i: { r: 255, g: 0, b: 0 }, s: { r: 255, g: 128, b: 0 }, a: { r: 255, g: 255, b: 0 }, c: { r: 0, g: 255, b: 0 } };
+const relevant = ["home", "cases", "deceased", "intensive", "symptoms", "hospitalized", "positives", "healed"];
+const rgb = { deceased: { r: 200, g: 100, b: 30 }, intensive: { r: 255, g: 0, b: 0 }, symptoms: { r: 255, g: 128, b: 0 }, home: { r: 255, g: 255, b: 0 }, cases: { r: 0, g: 255, b: 0 } };
 const tip = [
-	["c", "#000000"],
-	["h", "#00dd00"],
-	["p", "#000000"],
-	["a", "#dddd00"],
-	["b", "#000000"],
-	["s", "#ff8000"],
-	["i", "#dd0000"],
-	["d", "#c8641e"]
+	["cases", "#000000"],
+	["healed", "#00dd00"],
+	["positives", "#000000"],
+	["home", "#dddd00"],
+	["hospitalized", "#000000"],
+	["symptoms", "#ff8000"],
+	["intensive", "#dd0000"],
+	["deceased", "#c8641e"]
 ];
 
 const records = [
-	["#00c000", ["d", "i", "s", "a", "h"]],
-	["#c0c000", ["d", "i", "s", "a"]],
-	["#c06000", ["d", "i", "s"]],
-	["#c00000", ["d", "i"]],
-	["#64320f", ["d"]]
+	["#00c000", ["deceased", "intensive", "symptoms", "home", "healed"]],
+	["#c0c000", ["deceased", "intensive", "symptoms", "home"]],
+	["#c06000", ["deceased", "intensive", "symptoms"]],
+	["#c00000", ["deceased", "intensive"]],
+	["#64320f", ["deceased"]]
 ];
+
+//console.log(JSON.stringify(records.map(e => [e[0], e[1].map(r => Object.keys(stats).reduce((c, s) => (c ? c : stats[s].url === r[0] ? s : null), null))])));
 
 let isPortrait;
 let shift;
@@ -80,18 +82,18 @@ class ToolTip extends Component {
 		const record = {};
 		const date = new Date(2020, 1, 18 + day, 3).toISOString().substr(5, 5);
 
-		if(prociv[region].data[day]) Object.keys(lines).forEach(stat => (record[stat] = prociv[region].data[day][stat]));
+		if(schema[region][0].recordset.cases[day]) Object.keys(lines).forEach(stat => (record[stat] = schema[region][0].recordset[stat][day]));
 
 		relevant.forEach(stat => {
-			if(prociv[region].data[day]) record[stat] = prociv[region].data[day][stat];
+			if(schema[region][0].recordset[stat][day]) record[stat] = schema[region][0].recordset[stat][day];
 			forecasts[stat] = functions[stat] = Math.floor(lines[stat].f(day));
-			if(stat === "h") forecasts.h = forecasts.c - forecasts.d - forecasts.p;
-			if(stat === "p") forecasts.p = forecasts.a + forecasts.b;
-			if(stat === "b") forecasts.b = forecasts.i + forecasts.s;
+			if(stat === "healed") forecasts.healed = forecasts.cases - forecasts.deceased - forecasts.positives;
+			if(stat === "positives") forecasts.positives = forecasts.home + forecasts.hospitalized;
+			if(stat === "hospitalized") forecasts.hospitalized = forecasts.intensive + forecasts.symptoms;
 		});
 
 		const single = stat => (forecasts[stat] < 2 && functions[stat] < 2 ? 0 : Math.abs(forecasts[stat] - functions[stat]) / Math.max(forecasts[stat], functions[stat]));
-		const error = 100 * ["h", "p", "b"].reduce((avg, stat) => avg + single(stat), 0);
+		const error = 100 * ["healed", "positives", "hospitalized"].reduce((avg, stat) => avg + single(stat), 0);
 
 		return (
 			<div className="Table" style={{ display, left, top }} onTouchStart={event => this.hide()}>
@@ -105,19 +107,19 @@ class ToolTip extends Component {
 				</div>
 				<div className="TRow">
 					<div className="TCellL">{dict.data[language]}:</div>
-					<div className="TCellR">{dict[record.c ? "record" : "forecast"][language]}</div>
+					<div className="TCellR">{dict[record.cases ? "record" : "forecast"][language]}</div>
 				</div>
 				{tip.map(([stat, color]) => (
 					<div className="TRow" key={stat}>
 						<div className="TCellL">
 							<span style={{ color }}>{stats[stat].legend[language]}</span>:
 						</div>
-						<div className="TCellR">{record.c ? record[stat] : forecasts[stat]}</div>
+						<div className="TCellR">{record.cases ? record[stat] : forecasts[stat]}</div>
 					</div>
 				))}
 				<div className="TRow">
 					<div className="TCellL">{dict.err[language]}:</div>
-					<div className="TCellR">{record.c ? "NA" : "±" + error.toFixed(2) + "%"}</div>
+					<div className="TCellR">{record.cases ? "NA" : "±" + error.toFixed(2) + "%"}</div>
 				</div>
 			</div>
 		);
@@ -149,64 +151,72 @@ class ToolTip extends Component {
 	}
 }
 
-class Advanced extends Component {
-	constructor() {
-		super();
+export class SurfaceChart extends Component {
+	constructor(props) {
+		super(props);
+
 		this.disappeared = false;
+		this.prevProps = {};
 		this.state = {};
 		this.viewportHeight = window.innerHeight;
 		this.viewportWidth = window.innerWidth;
+
 		isPortrait = this.viewportHeight > this.viewportWidth;
 	}
 
 	componentDidMount() {
+		this.registerHandle();
 		this.handleResize = () => this.resize();
 		window.addEventListener("resize", this.handleResize);
-
-		this.resize();
-		this.forecast(this.props.region);
 	}
 
 	componentDidUpdate() {
-		this.forecast(this.props.region);
-		this.draw();
+		this.registerHandle();
+		//		this.draw();
 	}
 
 	componentWillUnmount() {
+		this.unregisterHandle();
 		window.removeEventListener("resize", this.handleResize);
 	}
 
-	forecast(region) {
-		const last = prociv[0].data.lastIndexOf(prociv[0].data.slice(-1)[0]);
+	registerHandle() {
+		const { region } = this.props.parent.state;
+		const prevProps = { region };
 
-		let tmax = 0;
+		Object.entries(prevProps).forEach(([key, value]) => {
+			if(this.prevProps[key] !== value) {
+				this.unregisterHandle();
+				this.prevProps = prevProps;
+				this.forecastHandle = registerForecastsHandle(region, 0, () => {
+					this.retrivedData = true;
 
-		if(last === this.last && region === this.region) return;
+					let error = false;
+					let tmax = 0;
 
-		this.error = false;
-		this.last = last;
-		this.region = region;
+					Object.keys(stats).forEach(stat => (error = ! schema[region][0].forecasts[stat].model));
 
-		try {
-			relevant.forEach(stat => {
-				const data = getData(stat, region);
-				const { fs, tMax } = gauss(data, stat, region);
-				const f = fs[7];
+					if(error) return this.setState({ error: true });
 
-				if(tmax < tMax) tmax = tMax;
+					relevant.forEach(stat => {
+						const { data, model } = schema[region][0].forecasts[stat];
+						const { f, tMax } = model;
 
-				lines[stat] = { data, f };
-			});
-		} catch(e) {
-			return this.setState({ error: true });
-		}
+						if(tmax < tMax) tmax = tMax;
 
-		this.lines = lines;
-		this.tMax = tmax;
-		this.setState({ error: false }, () => {
-			this.resize();
-			this.draw();
+						lines[stat] = { data, f };
+					});
+
+					this.lines = lines;
+					this.tMax = tmax;
+					this.setState({ error }, () => this.resize());
+				});
+			}
 		});
+	}
+
+	unregisterHandle() {
+		if(this.forecastHandle) unregisterForecastsHandle(this.forecastHandle);
 	}
 
 	handleMouseMove(event) {
@@ -245,15 +255,15 @@ class Advanced extends Component {
 	}
 
 	render() {
-		const { language, region } =    this.props;
+		const { language, region } = this.props.parent.state;
 
-		return (
-			<div>
-				{/*<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>*/}
-				<div align="center">
-					{this.state.error ? (
-						<div className="Error">{`${dict.error[language]} ${prociv[region].name}`}</div>
-					) : (
+		return this.retrivedData ? (
+			this.state.error ? (
+				<div align="center" className="Error">{`${dict.error[language]} ${schema[region][0].name}`}</div>
+			) : (
+				<div>
+					{/*<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>*/}
+					<div align="center">
 						<canvas
 							ref={ref => (this.canvas = ref)}
 							onMouseMove={event => this.handleMouseMove(event)}
@@ -262,11 +272,11 @@ class Advanced extends Component {
 							onTouchMove={event => this.handleTouchMove(event)}
 							onTouchStart={event => this.handleTouchStart(event)}
 						/>
-					)}
-					<ToolTip language={language} ref={ref => (this.tooltip = ref)} region={region} />
+						<ToolTip language={language} ref={ref => (this.tooltip = ref)} region={region} />
+					</div>
 				</div>
-			</div>
-		);
+			)
+		) : null;
 	}
 
 	resize() {
@@ -296,16 +306,9 @@ class Advanced extends Component {
 		this.draw();
 	}
 
-	setState(state) {
-		super.setState(state, () => {
-			this.tooltip.hide();
-			this.resize();
-		});
-	}
-
 	draw() {
 		const { canvas, canvasWidth, canvasHeight, lines, tMax } = this;
-		const { region } = this.props;
+		const { region } = this.props.parent.state;
 
 		if(! this.tMax) return;
 		if(! this.canvas) return;
@@ -320,8 +323,8 @@ class Advanced extends Component {
 		let yMax = 0;
 
 		for(let t = 6; t <= tMax; ++t) {
-			const yc = lines.c.f(t);
-			const ys = lines.d.f(t) + lines.h.f(t) + lines.p.f(t);
+			const yc = lines.cases.f(t);
+			const ys = lines.deceased.f(t) + lines.healed.f(t) + lines.positives.f(t);
 
 			if(yMax < yc) yMax = yc;
 			if(yMax < ys) yMax = ys;
@@ -365,9 +368,9 @@ class Advanced extends Component {
 			let first = (i + imgWidth * (imgHeight - 1)) * 4;
 			let sum = 0;
 
-			["d", "i", "s", "a", "c"].forEach(stat => {
+			["deceased", "intensive", "symptoms", "home", "cases"].forEach(stat => {
 				const f = this.lines[stat].f(t);
-				const last = y2Img((stat === "c" ? 0 : sum) + f) * imgWidth * 4;
+				const last = y2Img((stat === "cases" ? 0 : sum) + f) * imgWidth * 4;
 				const { r, g, b } = rgb[stat];
 
 				for(let y = first; y > last; y -= step) {
@@ -384,15 +387,14 @@ class Advanced extends Component {
 
 		ctx.putImageData(back, drawXOffset * imgScale, 0);
 
-		ctx.lineWidth = "1";
 		records.forEach(([color, adds]) => {
-			const sum = day => adds.reduce((tot, stat) => tot + prociv[region].data[day][stat], 0);
+			const sum = day => adds.reduce((tot, stat) => tot + schema[region][0].recordset[stat][day], 0);
 
 			ctx.lineWidth = 2;
 			ctx.strokeStyle = color;
 			ctx.beginPath();
 			ctx.moveTo(x2Canvas(6), y2Canvas(sum(6)));
-			prociv[region].data.forEach((e, i) => (i > 6 ? ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))) : null));
+			schema[region][0].recordset.cases.forEach((e, i) => (i > 6 ? ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))) : null));
 			ctx.stroke();
 		});
 
@@ -479,5 +481,3 @@ class Advanced extends Component {
 		ctx.putImageData(img, drawXOffset * imgScale, 0);
 	}
 }
-
-export default Advanced;
