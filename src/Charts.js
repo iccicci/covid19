@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import { decompressFromBase64 } from "./lz-string";
 import { checkExclude, groups, registerSchemaHandle, schema, stats, unregisterSchemaHandle } from "./schema";
 import { LinesChart } from "./Lines";
 import { Option, OptionLink } from "./Option";
@@ -57,33 +56,6 @@ export class Charts extends Component {
 
 		this.url = this.props.match.url;
 		this.urlParams = this.props.location.pathname.substr(this.url.length);
-
-		if(this.props.location.hash) {
-			try {
-				const old = JSON.parse(decompressFromBase64(this.props.location.hash.substr(1)));
-				const { l, r, w } = old;
-				const state = { city: w || 0, language: l, region: r, forecasts: [], view: "proiezioni" };
-
-				Object.entries(stats).map(([stat, details]) => (state[stat] = old[details.url]));
-
-				if(old.f) {
-					old.f.forEach(e => {
-						const forecast = { region: e.r };
-
-						if(e.w) forecast.city = e.w;
-						else {
-							Object.entries(stats).forEach(([stat, details]) => {
-								if(e.s === details.url) forecast.stat = stat;
-							});
-						}
-
-						state.forecasts.push(forecast);
-					});
-				}
-
-				return window.location.replace(this.url + this.getUrlParamsFromState(state));
-			} catch(e) {}
-		}
 
 		this.setState(this.getStateFromUrlParams(this.urlParams));
 
