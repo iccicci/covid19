@@ -3,7 +3,7 @@ import { day2date, getData, groups, registerSchemaHandle, schema, stats, unregis
 import { Option } from "./Option";
 import { registerForecastsHandle, unregisterForecastsHandle } from "./forecasts";
 
-import CanvasJS from "./canvasjs.min";
+const CanvasJS = require("./canvasjs.min");
 
 const dict = {
 	add:    { e: "add forecast", i: "aggiungi proiezione" },
