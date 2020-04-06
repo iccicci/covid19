@@ -70,26 +70,7 @@ export function getData(stat, region, city) {
 	return schema[region][city].recordset[stat].map((e, i) => [i, e]).filter((e, i) => i > 5);
 }
 
-function fromSource(source, city) {
-	const code = source.codice_regione ? (source.denominazione_regione === "P.A. Bolzano" ? 21 : source.codice_regione) : 0;
-	const data = {};
-	const name = city ? `${source.denominazione_provincia} (${source.sigla_provincia})` : source.denominazione_regione ? source.denominazione_regione : "Italia";
-	const ret = { code, data, name };
-
-	Object.entries(stats).map(([stat, value]) => {
-		const s = source[value.source];
-
-		if(s !== undefined) data[stat] = s;
-
-		return null;
-	});
-
-	if(city) ret.city = source.codice_provincia;
-
-	return ret;
-}
-
-function fromSource2(source) {
+function fromSource(source) {
 	const { codice_provincia, codice_regione, data, denominazione_provincia, denominazione_regione, sigla_provincia } = source;
 
 	const city = codice_provincia;
@@ -133,7 +114,7 @@ function refresh() {
 				.then(res => res.json())
 				.then(res => {
 					res.forEach(e => {
-						const { day, name, region } = fromSource2(e);
+						const { day, name, region } = fromSource(e);
 
 						if(! built[region]) {
 							const recordset = initRecordset();
@@ -150,7 +131,7 @@ function refresh() {
 							res.forEach(e => {
 								if(! e.sigla_provincia) return;
 
-								const { city, day, name, region } = fromSource2(e);
+								const { city, day, name, region } = fromSource(e);
 
 								if(! built[region][city]) built[region][city] = { forecasts: {}, name, recordset: { cases: [] } };
 
