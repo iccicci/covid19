@@ -1,5 +1,5 @@
 import { Matrix, pseudoInverse } from "ml-matrix";
-import { checkExclude, day2date, getData, prociv, registerSchemaHandle, stats, schema } from "./schema";
+import { checkExclude, day2date, getData, registerSchemaHandle, stats, schema } from "./schema";
 import { T } from "owen-s-t-function";
 import erf from "math-erf";
 import regression from "regression";
@@ -209,7 +209,7 @@ export function gaussChart(data, stat, region, city) {
 
 	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: Math.round(f(t)) });
 
-	const line = { beta, beta0, color: colors[7], dataPoints };
+	const line = { beta, beta0, color: stat === "deceased" ? "#606060" : colors[7], dataPoints };
 
 	line.legend = language => (line.legendText = language === "i" ? "proiezione" : "forecast");
 
@@ -244,7 +244,8 @@ export function gauss2() {
 	const lines = {};
 	const ret = [];
 	const steps = 8;
-	const t = prociv[0].data.map((e, i) => i).filter((e, i) => i > 5);
+	//const t = prociv[0].data.map((e, i) => i).filter((e, i) => i > 5);
+	const t = schema[0].data.map((e, i) => i).filter((e, i) => i > 5);
 
 	let beta = [];
 	let tMax = 0;
@@ -255,7 +256,8 @@ export function gauss2() {
 	console.log("t", t);
 
 	Object.entries(functions).forEach(([s, fun]) => {
-		const data = prociv[0].data.map((e, i) => [i, e[s]]).filter((e, i) => i > 5);
+		//const data = prociv[0].data.map((e, i) => [i, e[s]]).filter((e, i) => i > 5);
+		const data = schema[0].data.map((e, i) => [i, e[s]]).filter((e, i) => i > 5);
 		const m = models[stats[s].model];
 		const beta0 = m.beta0(data);
 		const y = data.map(([, y]) => y);
@@ -385,7 +387,8 @@ export function gauss2() {
 	base.forEach(s =>
 		ret.push({
 			color:      stats[s].color,
-			dataPoints: prociv[0].data
+			//dataPoints: prociv[0].data
+			dataPoints: schema[0].data
 				.map((e, i) => [i, e[s]])
 				.filter((e, i) => i > 5)
 				.map(e => ({ x: day2date[e[0]], y: e[1] })),

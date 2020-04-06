@@ -99,6 +99,8 @@ class Forecast extends Component {
 			parent.parent.setState({ forecasts: newForecasts });
 		};
 
+		if(this.chart) while(this.chart.chart.data.length) this.chart.chart.data[0].remove();
+
 		return (
 			<div>
 				<p>
@@ -118,7 +120,7 @@ class Forecast extends Component {
 						<Option enabled={stat === current} key={stat} desc={value.desc[language]} onClick={() => (city ? null : refresh({ region, stat }))} />
 					))}
 				</p>
-				<div>{this.options ? <CanvasJSReact.CanvasJSChart options={this.options} /> : null}</div>
+				<div>{this.options ? <CanvasJSReact.CanvasJSChart options={this.options} ref={ref => (this.chart = ref)} /> : null}</div>
 				<Option enabled={true} desc={dict.remove[language]} onClick={remove} />
 			</div>
 		);
@@ -193,6 +195,8 @@ export class LinesChart extends Component {
 		this.parent = parent;
 		this.regionOptions = regionOptions;
 
+		if(this.chart) while(this.chart.chart.data.length) this.chart.chart.data[0].remove();
+
 		return (
 			<div>
 				<header id="head">
@@ -217,7 +221,7 @@ export class LinesChart extends Component {
 					</div>
 				</header>
 				<div style={{ paddingBottom: "20px" }}>
-					<div>{this.options ? <CanvasJSReact.CanvasJSChart options={this.options} /> : null}</div>
+					<div>{this.options ? <CanvasJSReact.CanvasJSChart options={this.options} ref={ref => (this.chart = ref)} /> : null}</div>
 					{forecasts.map((e, i) => (
 						<Forecast key={i} i={i} language={language} parent={this} />
 					))}

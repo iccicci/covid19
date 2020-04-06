@@ -27,7 +27,7 @@ export const stats = {
 		source: "variazione_totale_positivi",
 		url:    "n"
 	},
-	new:      { color: "cyan", desc: { e: "new positives", i: "nuovi positivi" }, legend: { e: "new", i: "nuovi" }, model: "derivate", source: "nuovi_positivi", url: "e" },
+	new:      { color: "cyan", desc: { e: "new positives", i: "nuovi positivi" }, legend: { e: "new", i: "nuovi" }, model: "gauss", source: "nuovi_positivi", url: "e" },
 	cases:    { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, model: "integral", source: "totale_casi", url: "c" },
 	deceased: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, model: "integral", source: "deceduti", url: "d" },
 	tests:    { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi", url: "t" }
@@ -48,8 +48,6 @@ export const groups = {
 export const checkExclude = false;
 export const date2day = {};
 export const day2date = [];
-export const prociv = [];
-export const procivc = [];
 export const schema = [];
 
 const schemaHandles = {};
@@ -131,9 +129,6 @@ function refresh() {
 				Object.entries(stats).forEach(([stat, details]) => (recordset[stat][day] = e[details.source]));
 			});
 
-			prociv[0] = { code: 0, data: [], name: "Italia" };
-			res.map(e => (prociv[0].data[date2day[e.data.substr(0, 10)]] = fromSource(e).data));
-
 			fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-regioni.json")
 				.then(res => res.json())
 				.then(res => {
@@ -149,14 +144,6 @@ function refresh() {
 						Object.entries(stats).forEach(([stat, details]) => (built[region][0].recordset[stat][day] = e[details.source]));
 					});
 
-					res.map(e => {
-						const { code, data, name } = fromSource(e);
-
-						if(! prociv[code]) prociv[code] = { code, data: [], name };
-
-						return (prociv[code].data[date2day[e.data.substr(0, 10)]] = data);
-					});
-
 					fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json")
 						.then(res => res.json())
 						.then(res => {
@@ -168,17 +155,6 @@ function refresh() {
 								if(! built[region][city]) built[region][city] = { forecasts: {}, name, recordset: { cases: [] } };
 
 								built[region][city].recordset.cases[day] = e[stats.cases.source];
-							});
-
-							res.map(e => {
-								if(! e.sigla_provincia) return 0;
-
-								const { city, code, data, name } = fromSource(e, true);
-
-								if(! procivc[code]) procivc[code] = [];
-								if(! procivc[code][city]) procivc[code][city] = { city, data: [], name };
-
-								return (procivc[code][city].data[date2day[e.data.substr(0, 10)]] = data);
 							});
 
 							built.forEach((cities, region) => (schema[region] = cities));
