@@ -3,7 +3,7 @@ import { day2date, getData, groups, registerSchemaHandle, schema, stats, unregis
 import { Option } from "./Option";
 import { registerForecastsHandle, unregisterForecastsHandle } from "./forecasts";
 
-import CanvasJSReact from "./canvasjs.react";
+import CanvasJS from "./canvasjs.min";
 
 const dict = {
 	add:    { e: "add forecast", i: "aggiungi proiezione" },
@@ -18,6 +18,8 @@ class Forecast extends Component {
 	constructor(props) {
 		super(props);
 
+		// prettier-ignore
+		this.chardId = Math.random().toString().substr(2);
 		this.prevProps = {};
 	}
 
@@ -53,7 +55,7 @@ class Forecast extends Component {
 
 					chart.forEach(line => line.legend(language));
 
-					this.options = {
+					const options = {
 						axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
 						title: { fontSize: 18, text: schema[region][city].name },
 						data:  [...chart, { color: stats[stat].color, dataPoints: data.map(e => ({ x: day2date[e[0]], y: e[1] })), legendText: stats[stat].legend[language] }].map(e => ({
@@ -65,7 +67,7 @@ class Forecast extends Component {
 						}))
 					};
 
-					this.setState({});
+					new CanvasJS.Chart(this.chardId, options).render();
 				});
 			}
 		});
@@ -118,7 +120,7 @@ class Forecast extends Component {
 						<Option enabled={stat === current} key={stat} desc={value.desc[language]} onClick={() => (city ? null : refresh({ region, stat }))} />
 					))}
 				</p>
-				<div>{this.options ? <CanvasJSReact.CanvasJSChart options={this.options} /> : null}</div>
+				<div id={this.chardId} style={{ height: "400px", width: "100%" }}></div>
 				<Option enabled={true} desc={dict.remove[language]} onClick={remove} />
 			</div>
 		);
@@ -129,6 +131,8 @@ export class LinesChart extends Component {
 	constructor(props) {
 		super(props);
 
+		// prettier-ignore
+		this.chardId = Math.random().toString().substr(2);
 		this.prevProps = {};
 	}
 
@@ -157,8 +161,7 @@ export class LinesChart extends Component {
 				this.schemaHandle = registerSchemaHandle(() => {
 					const common = { markerSize: 8, markerType: "circle", showInLegend: true, type: "line" };
 					const lines = Object.entries(stats).filter(city ? ([stat]) => stat === "cases" : ([stat]) => this.parent.state[stat]);
-
-					this.options = {
+					const options = {
 						axisX: { valueFormatString: "DD-MMM", labelAngle: -50 },
 						title: { fontSize: 18, text: schema[region][city].name },
 						data:  lines.map(([stat, value]) => ({
@@ -169,7 +172,7 @@ export class LinesChart extends Component {
 						}))
 					};
 
-					this.setState({});
+					new CanvasJS.Chart(this.chardId, options).render();
 				});
 			}
 		});
@@ -217,7 +220,7 @@ export class LinesChart extends Component {
 					</div>
 				</header>
 				<div style={{ paddingBottom: "20px" }}>
-					<div>{this.options ? <CanvasJSReact.CanvasJSChart options={this.options} /> : null}</div>
+					<div id={this.chardId} style={{ height: "400px", width: "100%" }}></div>
 					{forecasts.map((e, i) => (
 						<Forecast key={i} i={i} language={language} parent={this} />
 					))}
