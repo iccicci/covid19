@@ -1,5 +1,6 @@
 import { Matrix, pseudoInverse } from "ml-matrix";
 import { checkExclude, day2date, getData, prociv, registerSchemaHandle, stats, schema } from "./schema";
+import { T } from "owen-s-t-function";
 import erf from "math-erf";
 import regression from "regression";
 
@@ -19,68 +20,77 @@ const regressions = [
 
 let lastDay;
 
-function guess(data) {
-	let a = 0;
-	let b;
+function guessBetaPDF(data) {
+	let yMax = 0;
+	let tyMax;
 
 	data.map(([t, y]) => {
-		if(y > a) {
-			a = y;
-			b = t;
+		if(y > yMax) {
+			yMax = y;
+			tyMax = t;
 		}
 		return null;
 	});
 
-	return [a, b, 10];
+	return [yMax, tyMax, 10];
+}
+
+let verbose;
+
+function guessBetaCDF(data) {
+	const mArray = [];
+	let mMax = 0;
+	let tmMax;
+
+	for(let i = 6; i < lastDay - 5; ++i) {
+		const res = regression.linear(
+			data.filter(([day]) => day >= i && day < i + 7),
+			{ precision: 3 }
+		);
+
+		const m = (mArray[i + 3] = res.equation[0]);
+		if(m > mMax) {
+			mMax = m;
+			tmMax = i + 3;
+		}
+	}
+
+	if(verbose) console.log("mmax", mMax, "t mmax", tmMax, "y mmax", data[tmMax - 6]);
+
+	return [[mMax, tmMax, data[tmMax - 6][1] / mMax, data[tmMax - 6][1]]];
 }
 
 const models = {
 	derivate: {
 		beta0: data => {
-			const ret = guess(data);
+			const ret = guessBetaPDF(data);
 
 			return [[ret[0] * 10, 40, 10]];
 		},
-		d: [
-			([, b, c]) => t => ((t - b) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c ** 2,
-			([a, b, c]) => t => (a * exp(-((t - b) ** 2 / (2 * c ** 2))) * (b ** 2 - 2 * b * t - c ** 2 + t ** 2)) / c ** 4,
-			([a, b, c]) => t => (a * (t - b) * exp(-((t - b) ** 2 / (2 * c ** 2))) * (b ** 2 - 2 * b * t - 2 * c ** 2 + t ** 2)) / c ** 5
-		],
 		f:    ([a, b, c]) => t => (-a * (t - b) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c ** 2,
 		tMax: ([, b]) => 2 * b - 6
 	},
 	gauss: {
-		beta0: data => {
-			const ret = guess(data);
+		beta2: data => {
+			const ret = guessBetaPDF(data);
 
-			return [ret];
+			return [[(ret[0] / 3) * 2, (ret[1] / 3) * 2, 20, 2]];
 		},
-		d: [
-			([, b, c]) => t => -exp(-((t - b) ** 2 / (2 * c ** 2))),
-			([a, b, c]) => t => -(((a * 4) / (2 * c ** 2) ** 2) * (t - b) * c ** 2 * exp(-((t - b) ** 2 / (2 * c ** 2)))),
-			([a, b, c]) => t => -(((a * 4) / (2 * c ** 2) ** 2) * (t - b) ** 2 * c * exp(-((t - b) ** 2 / (2 * c ** 2))))
-		],
-		f:    ([a, b, c]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)),
-		tMax: ([, b]) => 2 * b - 6
+		beta0: data => [guessBetaPDF(data)],
+		f2:    ([a, b, c, d]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2)),
+		f:     ([a, b, c]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)),
+		tMax:  ([, b]) => 2 * b - 6
 	},
 	integral: {
-		beta0: data => {
-			const ret = guess(data);
+		beta2: data => {
+			const ret = guessBetaCDF(data)[0];
 
-			return [
-				[ret[0] / 10, ret[1], ret[2], ret[0] / 2],
-				[ret[0] / 10, ret[1] - 5, 3, ret[0] / 2],
-				[ret[0] / 20, ret[1] - 10, ret[2], ret[0] / 2]
-			];
+			return [[ret[3] * 2, (ret[1] / 3) * 2, (ret[2] * 3) / 2, 2]];
 		},
-		d: [
-			([, b, c]) => t => SQRTPI2 * c * erf((b - t) / (SQRT2 * c)),
-			([a, b, c]) => t => a * exp(-((b - t) ** 2) / (2 * c ** 2)),
-			([a, b, c]) => t => SQRTPI2 * a * erf((b - t) / (SQRT2 * c)) - (a * (b - t) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c,
-			() => () => -1
-		],
-		f:    ([a, b, c, d]) => t => d - SQRTPI2 * a * c * erf((b - t) / (SQRT2 * c)),
-		tMax: ([, b]) => 2 * b - 6
+		beta0: guessBetaCDF,
+		f2:    ([a, b, c, d]) => t => a * ((1 + erf((t - b) / c / SQRT2)) / 2 - 2 * T((t - b) / c, d)),
+		f:     ([a, b, c, d]) => t => d - SQRTPI2 * a * c * erf((b - t) / (SQRT2 * c)),
+		tMax:  ([, b]) => 2 * b - 6
 	}
 };
 
@@ -96,6 +106,9 @@ export function gauss(data, stat, region, city) {
 	const t = data.map(([t]) => t);
 	const beta0 = m.beta0(data);
 
+	//verbose = city === "0" && stat === "healed";
+	//if(verbose) console.log("region", region, schema[region][0].name);
+
 	let betas = m.beta0(data);
 	//let Srp = 1e20;
 	//let Sr2p = 1e20;
@@ -104,6 +117,8 @@ export function gauss(data, stat, region, city) {
 		const fs = [];
 		const rows = data.length;
 		const cols = beta.length;
+
+		if(verbose) console.log("beta0", beta);
 
 		try {
 			for(let s = 0; s < rounds; ++s) {
@@ -126,14 +141,18 @@ export function gauss(data, stat, region, city) {
 
 				if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
 
-				const d = [];
-
-				for(let j = 0; j < cols; ++j) d[j] = m.d[j](beta);
-
 				for(let i = 0; i < rows; ++i) {
 					const row = [];
 
-					for(let j = 0; j < cols; ++j) row.push(d[j](t[i]));
+					for(let j = 0; j < cols; ++j) {
+						const beta1 = [...beta];
+						const beta2 = [...beta];
+
+						beta1[j] -= 0.0001;
+						beta2[j] += 0.0001;
+
+						row.push((m.f(beta1)(t[i]) - m.f(beta2)(t[i])) / 0.0002);
+					}
 
 					Jrjs.push(row);
 				}
@@ -151,8 +170,17 @@ export function gauss(data, stat, region, city) {
 				if(beta[1] > 1000) throw new Error("Lost peak");
 			}
 
+			if(verbose) {
+				console.log(
+					"beta",
+					beta.map(e => Math.round(e * 100) / 100)
+				);
+			}
+
 			return { beta: beta.map(e => Math.round(e * 100) / 100), beta0, fs, tMax: ceil(m.tMax(beta)) };
-		} catch(e) {}
+		} catch(e) {
+			if(verbose) console.log(e.message);
+		}
 	}
 
 	throw new Error("no");
@@ -170,7 +198,7 @@ export function gaussChart(data, stat, region, city) {
 
 		for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
 
-		ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}` });
+		ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}`, legend: () => null });
 	}
 
 	return ret;
