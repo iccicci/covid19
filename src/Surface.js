@@ -172,7 +172,6 @@ export class SurfaceChart extends Component {
 
 	componentDidUpdate() {
 		this.registerHandle();
-		//		this.draw();
 	}
 
 	componentWillUnmount() {
@@ -194,7 +193,7 @@ export class SurfaceChart extends Component {
 					let error = false;
 					let tmax = 0;
 
-					Object.keys(stats).forEach(stat => ((stat !== "tests" && ! schema[region][0].forecasts[stat].model) ? (error = true) : null));
+					Object.keys(stats).forEach(stat => (stat !== "tests" && ! schema[region][0].forecasts[stat].model ? (error = true) : null));
 
 					if(error) return this.setState({ error: true });
 
@@ -365,7 +364,7 @@ export class SurfaceChart extends Component {
 		for(let i = 0; i < imgWidth; ++i) {
 			const t = viewXmin + i / view2ImgXScale;
 
-			let first = (i + imgWidth * (imgHeight - 1)) * 4;
+			let y = (i + imgWidth * (imgHeight - 1)) * 4;
 			let sum = 0;
 
 			["deceased", "intensive", "symptoms", "home", "cases"].forEach(stat => {
@@ -373,14 +372,13 @@ export class SurfaceChart extends Component {
 				const last = y2Img((stat === "cases" ? 0 : sum) + f) * imgWidth * 4;
 				const { r, g, b } = rgb[stat];
 
-				for(let y = first; y > last; y -= step) {
+				for(; y > last; y -= step) {
 					back.data[y] = r;
 					back.data[y + 1] = g;
 					back.data[y + 2] = b;
 					back.data[y + 3] = 255;
 				}
 
-				first -= Math.floor(f * view2ImgYScale) * imgWidth * 4;
 				sum += f;
 			});
 		}
