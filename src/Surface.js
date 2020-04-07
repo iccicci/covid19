@@ -9,12 +9,12 @@ const dict = {
 	desktop: {
 		e: (
 			<span>
-				<b>COMING SOON: </b>horizontal zoom: <b>wheel</b> - vertical zoom: <b>&lt;SHIFT> + wheel</b>
+				horizontal zoom: <b>wheel</b> - vertical zoom: <b>&lt;SHIFT> + wheel</b>
 			</span>
 		),
 		i: (
 			<span>
-				<b>A BREVE: </b>zoom orizzontale: <b>rotella</b> - zoom verticale: <b>&lt;SHIFT> + rotella</b>
+				zoom orizzontale: <b>rotella</b> - zoom verticale: <b>&lt;SHIFT> + rotella</b>
 			</span>
 		)
 	},
@@ -67,6 +67,15 @@ document.addEventListener("keydown", event => (event.keyCode === 16 ? (shift = t
 document.addEventListener("keyup", event => (event.keyCode === 16 ? (shift = false) : null));
 
 relevant.forEach(stat => (lines[stat] = { f: () => 0 }));
+
+function getOffsets(event) {
+	const { clientX, clientY, target } = event;
+	const rect = target.getBoundingClientRect();
+	const offsetX = clientX - rect.left;
+	const offsetY = clientY - rect.top;
+
+	return { offsetX, offsetY };
+}
 
 class ToolTip extends Component {
 	constructor() {
@@ -237,10 +246,8 @@ export class SurfaceChart extends Component {
 	}
 
 	handleToolTip(event) {
-		const { clientX, clientY, target } = event;
-		const rect = target.getBoundingClientRect();
-		const offsetX = clientX - rect.left;
-		const offsetY = clientY - rect.top;
+		const { clientX, clientY } = event;
+		const { offsetX, offsetY } = getOffsets(event);
 
 		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
 
@@ -257,6 +264,12 @@ export class SurfaceChart extends Component {
 		this.handleToolTip(event.touches[0], true);
 	}
 
+	handleWheel(event) {
+		const { deltaX, deltaY, deltaZ, deltaMode, clientX, clientY } = event;
+
+		console.log(deltaX, deltaY, deltaZ, deltaMode, clientX, clientY);
+	}
+
 	render() {
 		const { language, region } = this.props.parent.state;
 
@@ -265,7 +278,7 @@ export class SurfaceChart extends Component {
 				<div align="center" className="Error">{`${dict.error[language]} ${schema[region][0].name}`}</div>
 			) : (
 				<div>
-					{/*<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>*/}
+					<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
 					<div align="center">
 						<canvas
 							ref={ref => (this.canvas = ref)}
@@ -274,6 +287,7 @@ export class SurfaceChart extends Component {
 							onTouchEnd={event => this.handleTouchEnd(event)}
 							onTouchMove={event => this.handleTouchMove(event)}
 							onTouchStart={event => this.handleTouchStart(event)}
+							onWheel={event => this.handleWheel(event)}
 						/>
 						<ToolTip language={language} ref={ref => (this.tooltip = ref)} region={region} />
 					</div>
@@ -286,7 +300,7 @@ export class SurfaceChart extends Component {
 		const newViewportHeight = window.innerHeight;
 		const newViewportWidth = window.innerWidth;
 		const newIsPortrait = newViewportHeight > newViewportWidth;
-		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight; // + document.getElementById("tip").clientHeight;
+		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight + document.getElementById("tip").clientHeight;
 
 		if(mobile) {
 			if(newIsPortrait !== isPortrait) window.location.reload();
@@ -362,14 +376,11 @@ export class SurfaceChart extends Component {
 		const view2CanvasYScale = drawHeight / viewHeight;
 		const view2ImgYScale = (this.view2ImgYScale = imgHeight / viewHeight);
 
-		this.drawFunctions();
-		this.drawBackgroud();
 		this.redraw();
 	}
 
 	drawBackgroud() {
-		const { ctx, imgHeight, imgWidth, view2ImgXScale, view2ImgYScale, viewXmin, viewYmin } = this;
-		const img = ctx.createImageData(imgWidth, imgHeight);
+		const { ctx, img, imgHeight, imgWidth, view2ImgXScale, view2ImgYScale, viewXmin, viewYmin } = this;
 		const step = imgWidth * 4;
 		const y2Img = y => imgHeight - Math.floor((y - viewYmin) * view2ImgYScale) - 1;
 
@@ -425,23 +436,18 @@ export class SurfaceChart extends Component {
 		});
 	}
 
-	drawXScale() {
-		const { canvasHeight, canvasWidth, ctx, drawHeight, img, imgHeight, imgWidth, view2CanvasXScale, view2ImgXScale, viewXmax, viewXmin, x2Canvas } = this;
+	drawXGrid() {
+		const { img, imgHeight, imgWidth, view2CanvasXScale, view2ImgXScale, viewXmax, viewXmin } = this;
 		const step = imgWidth * 4;
 		const x2Img = x => Math.floor((x - viewXmin) * view2ImgXScale);
 
-		let steps = 1;
+		let stepXGrid = 1;
 
-		while(steps * view2CanvasXScale < 35) ++steps;
+		while(stepXGrid * view2CanvasXScale < 35) ++stepXGrid;
 
-		ctx.fillStyle = "#ffffff";
-		ctx.fillRect(drawXOffset, canvasHeight - drawYOffset, canvasWidth - drawXOffset, drawYOffset);
-		ctx.fillStyle = "#000000";
-		ctx.font = "12px Arial";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "top";
+		this.stepXGrid = stepXGrid;
 
-		for(let t = Math.ceil(viewXmin); t < viewXmax; t += steps) {
+		for(let t = Math.ceil(viewXmin); t < viewXmax; t += stepXGrid) {
 			const first = x2Img(t) * 4;
 			const last = imgWidth * imgHeight * 4;
 
@@ -451,19 +457,30 @@ export class SurfaceChart extends Component {
 				img.data[i + 2] = 64;
 				img.data[i + 3] = 255;
 			}
-
-			ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
 		}
 	}
 
-	drawYScale() {
-		const { canvasHeight, ctx, drawHeight, img, imgHeight, imgWidth, view2ImgYScale, viewYmax, viewYmin, y2Canvas } = this;
+	drawXScale() {
+		const { canvasHeight, canvasWidth, ctx, drawHeight, stepXGrid, viewXmax, viewXmin, x2Canvas } = this;
+
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(drawXOffset, canvasHeight - drawYOffset, canvasWidth - drawXOffset, drawYOffset);
+		ctx.fillStyle = "#000000";
+		ctx.font = "12px Arial";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "top";
+
+		for(let t = Math.ceil(viewXmin); t < viewXmax; t += stepXGrid) ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
+	}
+
+	drawYGrid() {
+		const { ctx, drawHeight, img, imgHeight, imgWidth, view2ImgYScale, viewYmax, viewYmin, y2Canvas } = this;
 		const y2Img = y => imgHeight - Math.floor((y - viewYmin) * view2ImgYScale) - 1;
 
 		let next = true;
-		let scale = (viewYmax - viewYmin) / (drawHeight / 50);
+		let stepYGrid = (viewYmax - viewYmin) / (drawHeight / 50);
 		let prev = 1;
-		let diff = scale;
+		let diff = stepYGrid;
 		let exp = 1;
 		let uni = 0;
 
@@ -476,23 +493,16 @@ export class SurfaceChart extends Component {
 				exp *= 10;
 			}
 
-			if(Math.abs(scale - uni * exp) < diff) {
+			if(Math.abs(stepYGrid - uni * exp) < diff) {
 				prev = uni * exp;
-				diff = Math.abs(scale - prev);
+				diff = Math.abs(stepYGrid - prev);
 			} else {
 				next = false;
-				scale = prev;
+				stepYGrid = prev;
 			}
 		}
 
-		ctx.fillStyle = "#ffffff";
-		ctx.fillRect(0, 0, drawXOffset, canvasHeight);
-		ctx.fillStyle = "#000000";
-		ctx.font = "12px Arial";
-		ctx.textAlign = "right";
-		ctx.textBaseline = "middle";
-
-		for(let units = Math.floor(viewYmin / scale) * scale; units < viewYmax; units += scale) {
+		for(let units = Math.floor(viewYmin / stepYGrid) * stepYGrid; units < viewYmax; units += stepYGrid) {
 			const first = imgWidth * 4 * y2Img(units);
 			const last = first + imgWidth * 4;
 
@@ -507,16 +517,43 @@ export class SurfaceChart extends Component {
 		}
 	}
 
+	drawYScale() {
+		const { canvasHeight, ctx, stepYGrid, viewYmax, viewYmin, y2Canvas } = this;
+
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(0, 0, drawXOffset, canvasHeight);
+		ctx.fillStyle = "#000000";
+		ctx.font = "12px Arial";
+		ctx.textAlign = "right";
+		ctx.textBaseline = "middle";
+
+		for(let units = Math.floor(viewYmin / stepYGrid) * stepYGrid; units < viewYmax; units += stepYGrid) ctx.fillText(units, drawXOffset - 2, y2Canvas(units));
+	}
+
 	redraw() {
 		const { ctx, imgHeight, imgWidth } = this;
 
-		this.drawRecords();
+		if(this.animationFrame) return;
 
-		this.img = ctx.getImageData(drawXOffset * imgScale, 0, imgWidth, imgHeight);
+		this.animationFrame = window.requestAnimationFrame(() => {
+			const ora = new Date().getTime();
 
-		this.drawYScale();
-		this.drawXScale();
+			this.img = ctx.createImageData(imgWidth, imgHeight);
 
-		ctx.putImageData(this.img, drawXOffset * imgScale, 0);
+			this.drawFunctions();
+			this.drawBackgroud();
+			this.drawYGrid();
+			this.drawXGrid();
+
+			ctx.putImageData(this.img, drawXOffset * imgScale, 0);
+
+			this.drawRecords();
+			this.drawYScale();
+			this.drawXScale();
+
+			console.log(new Date().getTime() - ora);
+
+			this.animationFrame = null;
+		});
 	}
 }
