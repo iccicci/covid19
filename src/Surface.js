@@ -23,13 +23,13 @@ const dict = {
 	forecast: { e: "forecast", i: "proiezione" },
 	mobile:   { e: "horizontal zoom - vertical zoom", i: "zoom orizzontale - zoom verticale" },
 	record:   { e: "record", i: "registrato" },
+	scroll:   { e: "scroll up", i: "scorri in su" },
 	units:    { e: "units", i: "unità" }
 };
 
 const bands = ["deceased", "intensive", "symptoms", "home", "cases", "white"];
 const drawXOffset = 50;
 const drawYOffset = 20;
-const imgScale = window.devicePixelRatio;
 const lines = {};
 const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
 const relevant = ["home", "cases", "deceased", "intensive", "symptoms", "hospitalized", "positives", "healed"];
@@ -173,6 +173,8 @@ export class SurfaceChart extends Component {
 		this.state = {};
 		this.viewportHeight = window.innerHeight;
 		this.viewportWidth = window.innerWidth;
+		this.x2t = () => 0;
+		this.y2units = () => 0;
 
 		isPortrait = this.viewportHeight > this.viewportWidth;
 	}
@@ -242,7 +244,7 @@ export class SurfaceChart extends Component {
 	handleMouseOut() {
 		if(this.hideTimeout) clearTimeout(this.hideTimeout);
 
-		this.hideTimeout = setTimeout(() => this.tooltip.hide((this.hideTimeout = null)), 300);
+		this.hideTimeout = setTimeout(() => this.tooltip.hide((this.hideTimeout = null)), 200);
 	}
 
 	handleToolTip(event) {
@@ -251,7 +253,7 @@ export class SurfaceChart extends Component {
 
 		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
 
-		this.tooltip.setState({ day: this.x2t(offsetX) + 1, units: this.y2units(offsetY), x: clientX, y: clientY });
+		this.tooltip.setState({ day: Math.floor(this.x2t(offsetX)) + 1, units: Math.floor(this.y2units(offsetY)), x: clientX, y: clientY });
 	}
 
 	handleTouchEnd(event) {}
@@ -265,9 +267,79 @@ export class SurfaceChart extends Component {
 	}
 
 	handleWheel(event) {
-		const { deltaX, deltaY, deltaZ, deltaMode, clientX, clientY } = event;
+		const { chartXmax, chartXmin, chartYmax, chartYmin, drawHeight, drawWidth, imgHeight, imgWidth } = this;
+		const { deltaY } = event;
+		const { offsetX, offsetY } = getOffsets(event);
+		const originX = this.x2t(offsetX);
+		const originY = this.y2units(offsetY);
 
-		console.log(deltaX, deltaY, deltaZ, deltaMode, clientX, clientY);
+		if(shift) {
+			if(deltaY > 0) {
+				this.viewHeight /= 1.1;
+				this.view2ImgYScale = imgHeight / this.viewHeight;
+
+				if(this.view2ImgYScale > 0.1) {
+					this.view2ImgYScale = 0.1;
+					this.viewHeight = imgHeight / this.view2ImgYScale;
+				}
+
+				this.view2CanvasYScale = drawHeight / this.viewHeight;
+
+				this.viewYmax = originY + offsetY / this.view2CanvasYScale;
+				this.viewYmin = this.viewYmax - this.viewHeight;
+			} else {
+				this.viewHeight *= 1.1;
+
+				if(this.viewHeight > this.viewHeightMax) this.viewHeight = this.viewHeightMax;
+
+				this.view2ImgYScale = imgHeight / this.viewHeight;
+				this.view2CanvasYScale = drawHeight / this.viewHeight;
+
+				this.viewYmax = originY + offsetY / this.view2CanvasYScale;
+
+				if(this.viewYmax > chartYmax) this.viewYmax = chartYmax;
+
+				this.viewYmin = this.viewYmax - this.viewHeight;
+
+				if(this.viewYmin < chartYmin) {
+					this.viewYmin = chartYmin;
+					this.viewYmax = this.viewYmin + this.viewHeight;
+				}
+			}
+		} else if(deltaY > 0) {
+			this.viewWidth /= 1.1;
+			this.view2ImgXScale = imgWidth / this.viewWidth;
+
+			if(this.view2ImgXScale > 100) {
+				this.view2ImgXScale = 100;
+				this.viewWidth = imgWidth / this.view2ImgXScale;
+			}
+
+			this.view2CanvasXScale = drawWidth / this.viewWidth;
+
+			this.viewXmin = originX - (offsetX - drawXOffset) / this.view2CanvasXScale;
+			this.viewXmax = this.viewXmin + this.viewWidth;
+		} else {
+			this.viewWidth *= 1.1;
+
+			if(this.viewWidth > this.viewWidthMax) this.viewWidth = this.viewWidthMax;
+
+			this.view2ImgXScale = imgWidth / this.viewWidth;
+			this.view2CanvasXScale = drawWidth / this.viewWidth;
+
+			this.viewXmin = originX - (offsetX - drawXOffset) / this.view2CanvasXScale;
+
+			if(this.viewXmin < chartXmin) this.viewXmin = chartXmin;
+
+			this.viewXmax = this.viewXmin + this.viewWidth;
+
+			if(this.viewXmax > chartXmax) {
+				this.viewXmax = chartXmax;
+				this.viewXmin = this.viewXmax - this.viewWidth;
+			}
+		}
+
+		this.redraw();
 	}
 
 	render() {
@@ -278,7 +350,7 @@ export class SurfaceChart extends Component {
 				<div align="center" className="Error">{`${dict.error[language]} ${schema[region][0].name}`}</div>
 			) : (
 				<div>
-					<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
+					<p id="tip">{mobile && ! this.disappeared ? dict.scroll[language] : dict[mobile ? "mobile" : "desktop"][language]}</p>
 					<div align="center">
 						<canvas
 							ref={ref => (this.canvas = ref)}
@@ -308,9 +380,11 @@ export class SurfaceChart extends Component {
 			if(newViewportHeight > this.viewportHeight) {
 				this.disappeared = true;
 				this.canvas.style.touchAction = "none";
+				this.setState({});
 			}
 		}
 
+		this.imgScale = window.devicePixelRatio;
 		this.viewportHeight = newViewportHeight;
 		this.viewportWidth = newViewportWidth;
 		isPortrait = this.viewportHeight > this.viewportWidth;
@@ -320,11 +394,18 @@ export class SurfaceChart extends Component {
 		this.canvas.style.width = (this.canvasWidth = this.viewportWidth - 20) + "px";
 		this.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest + (this.disappeared || ! mobile ? 0 : 200)) + "px";
 
+		if(this.animationFrame) {
+			window.cancelAnimationFrame(this.animationFrame);
+			this.animationFrame = null;
+		}
+
+		this.tooltip.hide();
+
 		this.draw();
 	}
 
 	draw() {
-		const { canvas, canvasWidth, canvasHeight, lines, tMax } = this;
+		const { canvas, canvasWidth, canvasHeight, imgScale, lines, tMax } = this;
 
 		if(! this.tMax) return;
 		if(! this.canvas) return;
@@ -365,22 +446,25 @@ export class SurfaceChart extends Component {
 
 		const { drawWidth, drawHeight, imgWidth, imgHeight } = this;
 
-		const viewXmin = (this.viewXmin = chartXmin);
-		const viewXmax = (this.viewXmax = chartXmax);
-		const viewWidth = chartWidth;
-		const view2CanvasXScale = (this.view2CanvasXScale = drawWidth / viewWidth);
-		const view2ImgXScale = (this.view2ImgXScale = imgWidth / viewWidth);
-		const viewYmin = (this.viewYmin = chartYmin);
-		const viewYmax = (this.viewYmax = chartYmax);
-		const viewHeight = (this.viewHeight = chartHeight);
-		const view2CanvasYScale = drawHeight / viewHeight;
-		const view2ImgYScale = (this.view2ImgYScale = imgHeight / viewHeight);
+		this.viewXmin = chartXmin;
+		this.viewXmax = chartXmax;
+		this.viewWidth = chartWidth;
+		this.view2CanvasXScale = drawWidth / this.viewWidth;
+		this.view2ImgXScale = imgWidth / this.viewWidth;
+		this.viewYmin = chartYmin;
+		this.viewYmax = chartYmax;
+		this.viewHeight = chartHeight;
+		this.view2CanvasYScale = drawHeight / this.viewHeight;
+		this.view2ImgYScale = imgHeight / this.viewHeight;
+
+		this.viewWidthMax = this.viewWidth;
+		this.viewHeightMax = this.viewHeight;
 
 		this.redraw();
 	}
 
 	drawBackgroud() {
-		const { ctx, img, imgHeight, imgWidth, view2ImgXScale, view2ImgYScale, viewXmin, viewYmin } = this;
+		const { ctx, img, imgHeight, imgScale, imgWidth, view2ImgXScale, view2ImgYScale, viewXmin, viewYmin } = this;
 		const step = imgWidth * 4;
 		const y2Img = y => imgHeight - Math.floor((y - viewYmin) * view2ImgYScale) - 1;
 
@@ -395,7 +479,7 @@ export class SurfaceChart extends Component {
 				const last = stat === "white" ? 0 : y2Img((stat === "cases" ? 0 : sum) + f) * imgWidth * 4;
 				const { r, g, b } = rgb[stat];
 
-				for(; y > last; y -= step) {
+				for(; y > last && y > 0; y -= step) {
 					img.data[y] = r;
 					img.data[y + 1] = g;
 					img.data[y + 2] = b;
@@ -416,8 +500,8 @@ export class SurfaceChart extends Component {
 		this.x2Canvas = x => (x - viewXmin) * view2CanvasXScale + drawXOffset;
 		this.y2Canvas = y => drawHeight - (y - viewYmin) * view2CanvasYScale;
 
-		this.x2t = x => Math.floor((x - drawXOffset) / view2CanvasXScale + viewXmin);
-		this.y2units = y => Math.floor((drawHeight - y) / view2CanvasYScale + viewYmin);
+		this.x2t = x => (x - drawXOffset) / view2CanvasXScale + viewXmin;
+		this.y2units = y => (drawHeight - y) / view2CanvasYScale + viewYmin;
 	}
 
 	drawRecords() {
@@ -502,6 +586,8 @@ export class SurfaceChart extends Component {
 			}
 		}
 
+		this.stepYGrid = stepYGrid;
+
 		for(let units = Math.floor(viewYmin / stepYGrid) * stepYGrid; units < viewYmax; units += stepYGrid) {
 			const first = imgWidth * 4 * y2Img(units);
 			const last = first + imgWidth * 4;
@@ -531,13 +617,11 @@ export class SurfaceChart extends Component {
 	}
 
 	redraw() {
-		const { ctx, imgHeight, imgWidth } = this;
+		const { ctx, imgHeight, imgScale, imgWidth } = this;
 
 		if(this.animationFrame) return;
 
 		this.animationFrame = window.requestAnimationFrame(() => {
-			const ora = new Date().getTime();
-
 			this.img = ctx.createImageData(imgWidth, imgHeight);
 
 			this.drawFunctions();
@@ -550,8 +634,6 @@ export class SurfaceChart extends Component {
 			this.drawRecords();
 			this.drawYScale();
 			this.drawXScale();
-
-			console.log(new Date().getTime() - ora);
 
 			this.animationFrame = null;
 		});
