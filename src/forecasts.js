@@ -98,20 +98,22 @@ const rounds = 8;
 
 export function gauss(data, stat, region, city) {
 	if(! checkExclude) {
-		if(city === 59) throw new Error("Exclude Latina");
-		if(city === 80) throw new Error("Exclude Reggio Calabria");
+		if(region === 11 && stat === "symptoms") throw new Error("Exclude symptoms Marche");
+		if(region === 15 && stat === "home") throw new Error("Exclude home  Campania");
 	}
 
 	const m = models[stats[stat].model];
 	const t = data.map(([t]) => t);
 	const beta0 = m.beta0(data);
 
-	//verbose = city === "0" && stat === "healed";
-	//if(verbose) console.log("region", region, schema[region][0].name);
+	verbose = city === "-" && region === 3;
+	if(verbose) console.log("region", region, "city", city, schema[region][0].name);
 
 	let betas = m.beta0(data);
 	//let Srp = 1e20;
 	//let Sr2p = 1e20;
+
+	if(city === "98") betas = [[70, 20, 20, 900]];
 
 	for(let beta of betas) {
 		const fs = [];
@@ -177,7 +179,7 @@ export function gauss(data, stat, region, city) {
 				);
 			}
 
-			return { beta: beta.map(e => Math.round(e * 100) / 100), beta0, fs, tMax: ceil(m.tMax(beta)) };
+			return { beta: beta.map(e => Math.round(e * 100) / 100), beta0, fs, tMax: city === "98" ? 80 : ceil(m.tMax(beta)) };
 		} catch(e) {
 			if(verbose) console.log(e.message);
 		}
