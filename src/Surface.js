@@ -21,10 +21,21 @@ const dict = {
 	err:      { e: "error", i: "errore" },
 	error:    { e: "Not enough data to produce a valid forecast for", i: "Non ci sono ancora abbastanza dati per fare una proiezione affidabile in" },
 	forecast: { e: "forecast", i: "proiezione" },
-	mobile:   { e: "horizontal zoom - vertical zoom", i: "zoom orizzontale - zoom verticale" },
-	record:   { e: "record", i: "registrato" },
-	scroll:   { e: "scroll up", i: "scorri in su" },
-	units:    { e: "units", i: "unità" }
+	mobile:   {
+		e: (
+			<span>
+				<b>horizontal zoom</b> and <b>vertical zoom</b> are independent
+			</span>
+		),
+		i: (
+			<span>
+				<b>zoom orizzontale</b> e <b>zoom verticale</b> sono indipendenti
+			</span>
+		)
+	},
+	record: { e: "record", i: "registrato" },
+	scroll: { e: <b>scroll up</b>, i: <b>scorri in su</b> },
+	units:  { e: "units", i: "unità" }
 };
 
 const bands = ["deceased", "intensive", "symptoms", "home", "cases", "white"];
@@ -60,22 +71,7 @@ const records = [
 	["#64320f", ["deceased"]]
 ];
 
-let isPortrait;
-let shift;
-
-document.addEventListener("keydown", event => (event.keyCode === 16 ? (shift = true) : null));
-document.addEventListener("keyup", event => (event.keyCode === 16 ? (shift = false) : null));
-
 relevant.forEach(stat => (lines[stat] = { f: () => 0 }));
-
-function getOffsets(event) {
-	const { clientX, clientY, target } = event;
-	const rect = target.getBoundingClientRect();
-	const offsetX = clientX - rect.left;
-	const offsetY = clientY - rect.top;
-
-	return { offsetX, offsetY };
-}
 
 class ToolTip extends Component {
 	constructor() {
@@ -152,7 +148,7 @@ class ToolTip extends Component {
 		if(y > sizeY) {
 			state.left = (x > sizeX ? x - sizeX : 0) + "px";
 			state.top = y - sizeY + "px";
-		} else if(mobile && isPortrait && x <= sizeX) {
+		} else if(mobile && this.props.parent.isPortrait && x <= sizeX) {
 			state.left = "0px";
 			state.top = y + distance + "px";
 		} else {
@@ -173,10 +169,11 @@ export class SurfaceChart extends Component {
 		this.state = {};
 		this.viewportHeight = window.innerHeight;
 		this.viewportWidth = window.innerWidth;
+
+		this.isPortrait = this.viewportHeight > this.viewportWidth;
+
 		this.x2t = () => 0;
 		this.y2units = () => 0;
-
-		isPortrait = this.viewportHeight > this.viewportWidth;
 	}
 
 	componentDidMount() {
@@ -233,12 +230,67 @@ export class SurfaceChart extends Component {
 		if(this.forecastHandle) unregisterForecastsHandle(this.forecastHandle);
 	}
 
+	getOffsets(event) {
+		const { clientX, clientY, target } = event;
+		const rect = target.getBoundingClientRect();
+		const offsetX = clientX - rect.left;
+		const offsetY = clientY - rect.top;
+		const originX = this.x2t(offsetX);
+		const originY = this.y2units(offsetY);
+
+		return { offsetX, offsetY, originX, originY };
+	}
+
+	handleMouseDown(event) {
+		const { button, clientX, clientY } = event;
+		const { viewXmax, viewXmin, viewYmax, viewYmin } = this;
+
+		if(button) return;
+
+		this.dragging = { clientX, clientY, viewXmax, viewXmin, viewYmax, viewYmin };
+		this.tooltip.hide();
+	}
+
 	handleMouseMove(event) {
 		if(mobile) return;
 
-		if(this.hideTimeout) clearTimeout(this.hideTimeout);
+		if(! this.dragging) {
+			if(this.hideTimeout) clearTimeout(this.hideTimeout);
 
-		this.handleToolTip(event);
+			return this.handleToolTip(event);
+		}
+
+		const { chartXmax, chartXmin, chartYmax, chartYmin, dragging, view2CanvasXScale, view2CanvasYScale, viewHeight, viewWidth } = this;
+		const { clientX, clientY, viewXmax, viewXmin, viewYmax, viewYmin } = dragging;
+		const dragX = (clientX - event.clientX) / view2CanvasXScale;
+		const dragY = (event.clientY - clientY) / view2CanvasYScale;
+
+		this.viewXmin = viewXmin + dragX;
+		this.viewXmax = viewXmax + dragX;
+		this.viewYmin = viewYmin + dragY;
+		this.viewYmax = viewYmax + dragY;
+
+		if(this.viewXmin < chartXmin) {
+			this.viewXmin = chartXmin;
+			this.viewXmax = chartXmin + viewWidth;
+		}
+
+		if(this.viewXmax > chartXmax) {
+			this.viewXmax = chartXmax;
+			this.viewXmin = chartXmax - viewWidth;
+		}
+
+		if(this.viewYmin < chartYmin) {
+			this.viewYmin = chartYmin;
+			this.viewYmax = chartYmin + viewHeight;
+		}
+
+		if(this.viewYmax > chartYmax) {
+			this.viewYmax = chartYmax;
+			this.viewYmin = chartYmax - viewHeight;
+		}
+
+		this.redraw();
 	}
 
 	handleMouseOut() {
@@ -247,34 +299,42 @@ export class SurfaceChart extends Component {
 		this.hideTimeout = setTimeout(() => this.tooltip.hide((this.hideTimeout = null)), 200);
 	}
 
+	handleMouseUp(event) {
+		const { button } = event;
+
+		if(button) return;
+
+		this.dragging = null;
+	}
+
 	handleToolTip(event) {
 		const { clientX, clientY } = event;
-		const { offsetX, offsetY } = getOffsets(event);
+		const { offsetX, offsetY, originX, originY } = this.getOffsets(event);
 
 		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
 
-		this.tooltip.setState({ day: Math.floor(this.x2t(offsetX)) + 1, units: Math.floor(this.y2units(offsetY)), x: clientX, y: clientY });
+		this.tooltip.setState({ day: Math.floor(originX) + 1, units: Math.floor(originY), x: clientX, y: clientY });
 	}
 
 	handleTouchEnd(event) {}
 
 	handleTouchMove(event) {
-		this.handleToolTip(event.touches[0], true);
+		this.handleToolTip(event.touches[0]);
 	}
 
 	handleTouchStart(event) {
-		this.handleToolTip(event.touches[0], true);
+		this.handleToolTip(event.touches[0]);
 	}
 
 	handleWheel(event) {
-		const { chartXmax, chartXmin, chartYmax, chartYmin, drawHeight, drawWidth, imgHeight, imgWidth } = this;
-		const { deltaY } = event;
-		const { offsetX, offsetY } = getOffsets(event);
-		const originX = this.x2t(offsetX);
-		const originY = this.y2units(offsetY);
+		if(this.dragging) return;
 
-		if(shift) {
-			if(deltaY > 0) {
+		const { chartXmax, chartXmin, chartYmax, chartYmin, drawHeight, drawWidth, imgHeight, imgWidth } = this;
+		const { clientX, clientY, deltaY, shiftKey, target } = event;
+		const { offsetX, offsetY, originX, originY } = this.getOffsets(event);
+
+		if(shiftKey) {
+			if(deltaY < 0) {
 				this.viewHeight /= 1.1;
 				this.view2ImgYScale = imgHeight / this.viewHeight;
 
@@ -306,7 +366,7 @@ export class SurfaceChart extends Component {
 					this.viewYmax = this.viewYmin + this.viewHeight;
 				}
 			}
-		} else if(deltaY > 0) {
+		} else if(deltaY < 0) {
 			this.viewWidth /= 1.1;
 			this.view2ImgXScale = imgWidth / this.viewWidth;
 
@@ -339,7 +399,7 @@ export class SurfaceChart extends Component {
 			}
 		}
 
-		this.redraw();
+		this.redraw(() => this.handleToolTip({ clientX, clientY, target }));
 	}
 
 	render() {
@@ -354,14 +414,16 @@ export class SurfaceChart extends Component {
 					<div align="center">
 						<canvas
 							ref={ref => (this.canvas = ref)}
+							onMouseDown={event => this.handleMouseDown(event)}
 							onMouseMove={event => this.handleMouseMove(event)}
 							onMouseOut={event => this.handleMouseOut(event)}
+							onMouseUp={event => this.handleMouseUp(event)}
 							onTouchEnd={event => this.handleTouchEnd(event)}
 							onTouchMove={event => this.handleTouchMove(event)}
 							onTouchStart={event => this.handleTouchStart(event)}
 							onWheel={event => this.handleWheel(event)}
 						/>
-						<ToolTip language={language} ref={ref => (this.tooltip = ref)} region={region} />
+						<ToolTip language={language} parent={this} ref={ref => (this.tooltip = ref)} region={region} />
 					</div>
 				</div>
 			)
@@ -375,7 +437,7 @@ export class SurfaceChart extends Component {
 		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight + document.getElementById("tip").clientHeight;
 
 		if(mobile) {
-			if(newIsPortrait !== isPortrait) window.location.reload();
+			if(newIsPortrait !== this.isPortrait) window.location.reload();
 			if(this.disappeared) return;
 			if(newViewportHeight > this.viewportHeight) {
 				this.disappeared = true;
@@ -387,7 +449,6 @@ export class SurfaceChart extends Component {
 		this.imgScale = window.devicePixelRatio;
 		this.viewportHeight = newViewportHeight;
 		this.viewportWidth = newViewportWidth;
-		isPortrait = this.viewportHeight > this.viewportWidth;
 
 		if(this.state.error) return;
 
@@ -531,7 +592,7 @@ export class SurfaceChart extends Component {
 
 		this.stepXGrid = stepXGrid;
 
-		for(let t = Math.ceil(viewXmin); t < viewXmax; t += stepXGrid) {
+		for(let t = Math.ceil((viewXmin - 6) / stepXGrid) * stepXGrid + 6; t < viewXmax; t += stepXGrid) {
 			const first = x2Img(t) * 4;
 			const last = imgWidth * imgHeight * 4;
 
@@ -554,7 +615,7 @@ export class SurfaceChart extends Component {
 		ctx.textAlign = "center";
 		ctx.textBaseline = "top";
 
-		for(let t = Math.ceil(viewXmin); t < viewXmax; t += stepXGrid) ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
+		for(let t = Math.ceil((viewXmin - 6) / stepXGrid) * stepXGrid + 6; t < viewXmax; t += stepXGrid) ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
 	}
 
 	drawYGrid() {
@@ -616,7 +677,7 @@ export class SurfaceChart extends Component {
 		for(let units = Math.floor(viewYmin / stepYGrid) * stepYGrid; units < viewYmax; units += stepYGrid) ctx.fillText(units, drawXOffset - 2, y2Canvas(units));
 	}
 
-	redraw() {
+	redraw(done) {
 		const { ctx, imgHeight, imgScale, imgWidth } = this;
 
 		if(this.animationFrame) return;
@@ -636,6 +697,8 @@ export class SurfaceChart extends Component {
 			this.drawXScale();
 
 			this.animationFrame = null;
+
+			if(done) done();
 		});
 	}
 }
