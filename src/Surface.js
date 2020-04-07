@@ -26,13 +26,21 @@ const dict = {
 	units:    { e: "units", i: "unità" }
 };
 
+const bands = ["deceased", "intensive", "symptoms", "home", "cases", "white"];
 const drawXOffset = 50;
 const drawYOffset = 20;
 const imgScale = window.devicePixelRatio;
 const lines = {};
 const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
 const relevant = ["home", "cases", "deceased", "intensive", "symptoms", "hospitalized", "positives", "healed"];
-const rgb = { deceased: { r: 200, g: 100, b: 30 }, intensive: { r: 255, g: 0, b: 0 }, symptoms: { r: 255, g: 128, b: 0 }, home: { r: 255, g: 255, b: 0 }, cases: { r: 0, g: 255, b: 0 } };
+const rgb = {
+	deceased:  { r: 200, g: 100, b: 30 },
+	intensive: { r: 255, g: 0, b: 0 },
+	symptoms:  { r: 255, g: 128, b: 0 },
+	home:      { r: 255, g: 255, b: 0 },
+	cases:     { r: 0, g: 255, b: 0 },
+	white:     { r: 255, g: 255, b: 255 }
+};
 const tip = [
 	["cases", "#000000"],
 	["healed", "#00dd00"],
@@ -52,12 +60,8 @@ const records = [
 	["#64320f", ["deceased"]]
 ];
 
-//console.log(JSON.stringify(records.map(e => [e[0], e[1].map(r => Object.keys(stats).reduce((c, s) => (c ? c : stats[s].url === r[0] ? s : null), null))])));
-
 let isPortrait;
 let shift;
-let x2t = () => 0;
-let y2units = () => 0;
 
 document.addEventListener("keydown", event => (event.keyCode === 16 ? (shift = true) : null));
 document.addEventListener("keyup", event => (event.keyCode === 16 ? (shift = false) : null));
@@ -240,7 +244,7 @@ export class SurfaceChart extends Component {
 
 		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
 
-		this.tooltip.setState({ day: x2t(offsetX) + 1, units: y2units(offsetY), x: clientX, y: clientY });
+		this.tooltip.setState({ day: this.x2t(offsetX) + 1, units: this.y2units(offsetY), x: clientX, y: clientY });
 	}
 
 	handleTouchEnd(event) {}
@@ -307,7 +311,6 @@ export class SurfaceChart extends Component {
 
 	draw() {
 		const { canvas, canvasWidth, canvasHeight, lines, tMax } = this;
-		const { region } = this.props.parent.state;
 
 		if(! this.tMax) return;
 		if(! this.canvas) return;
@@ -315,7 +318,7 @@ export class SurfaceChart extends Component {
 		canvas.width = canvasWidth * imgScale;
 		canvas.height = canvasHeight * imgScale;
 
-		const ctx = canvas.getContext("2d");
+		const ctx = (this.ctx = canvas.getContext("2d"));
 
 		ctx.scale(imgScale, imgScale);
 
@@ -323,43 +326,52 @@ export class SurfaceChart extends Component {
 
 		for(let t = 6; t <= tMax; ++t) {
 			const yc = lines.cases.f(t);
-			const ys = lines.deceased.f(t) + lines.healed.f(t) + lines.positives.f(t);
+			const ys = lines.deceased.f(t) + lines.intensive.f(t) + lines.symptoms.f(t) + lines.home.f(t) + lines.healed.f(t);
 
 			if(yMax < yc) yMax = yc;
 			if(yMax < ys) yMax = ys;
 		}
 
-		const chartXmin = 5.5;
-		const chartXmax = tMax + 0.5;
-		const chartWidth = chartXmax - chartXmin;
-		const chartYmin = 0;
-		const chartYmax = yMax * 1.01;
-		const chartHeight = chartYmax - chartYmin;
-		const drawWidth = canvasWidth - drawXOffset;
-		const drawHeight = canvasHeight - drawYOffset;
-		const imgWidth = Math.floor((canvasWidth - drawXOffset) * imgScale);
-		const imgHeight = Math.floor((canvasHeight - drawYOffset) * imgScale);
-		const viewXmin = chartXmin;
-		const viewXmax = chartXmax;
+		this.chartXmin = 5.5;
+		this.chartXmax = tMax + 0.5;
+		this.chartYmin = 0;
+		this.chartYmax = yMax * 1.01;
+
+		const { chartXmin, chartXmax, chartYmin, chartYmax } = this;
+
+		this.chartWidth = chartXmax - chartXmin;
+		this.chartHeight = chartYmax - chartYmin;
+
+		const { chartWidth, chartHeight } = this;
+
+		this.drawWidth = canvasWidth - drawXOffset;
+		this.drawHeight = canvasHeight - drawYOffset;
+		this.imgWidth = Math.floor((canvasWidth - drawXOffset) * imgScale);
+		this.imgHeight = Math.floor((canvasHeight - drawYOffset) * imgScale);
+
+		const { drawWidth, drawHeight, imgWidth, imgHeight } = this;
+
+		const viewXmin = (this.viewXmin = chartXmin);
+		const viewXmax = (this.viewXmax = chartXmax);
 		const viewWidth = chartWidth;
-		const view2CanvasXScale = drawWidth / viewWidth;
-		const view2ImgXScale = imgWidth / viewWidth;
-		const viewYmin = chartYmin;
-		const viewYmax = chartYmax;
-		const viewHeight = chartHeight;
+		const view2CanvasXScale = (this.view2CanvasXScale = drawWidth / viewWidth);
+		const view2ImgXScale = (this.view2ImgXScale = imgWidth / viewWidth);
+		const viewYmin = (this.viewYmin = chartYmin);
+		const viewYmax = (this.viewYmax = chartYmax);
+		const viewHeight = (this.viewHeight = chartHeight);
 		const view2CanvasYScale = drawHeight / viewHeight;
-		const view2ImgYScale = imgHeight / viewHeight;
+		const view2ImgYScale = (this.view2ImgYScale = imgHeight / viewHeight);
+
+		this.drawFunctions();
+		this.drawBackgroud();
+		this.redraw();
+	}
+
+	drawBackgroud() {
+		const { ctx, imgHeight, imgWidth, view2ImgXScale, view2ImgYScale, viewXmin, viewYmin } = this;
+		const img = ctx.createImageData(imgWidth, imgHeight);
 		const step = imgWidth * 4;
-
-		const x2Canvas = x => (x - viewXmin) * view2CanvasXScale + drawXOffset;
-		const y2Canvas = y => drawHeight - (y - viewYmin) * view2CanvasYScale;
-		const x2Img = x => Math.floor((x - viewXmin) * view2ImgXScale);
 		const y2Img = y => imgHeight - Math.floor((y - viewYmin) * view2ImgYScale) - 1;
-
-		x2t = x => Math.floor((x - drawXOffset) / view2CanvasXScale + viewXmin);
-		y2units = y => Math.floor((drawHeight - y) / view2CanvasYScale + viewYmin);
-
-		const back = ctx.getImageData(drawXOffset * imgScale, 0, imgWidth, imgHeight);
 
 		for(let i = 0; i < imgWidth; ++i) {
 			const t = viewXmin + i / view2ImgXScale;
@@ -367,23 +379,39 @@ export class SurfaceChart extends Component {
 			let y = (i + imgWidth * (imgHeight - 1)) * 4;
 			let sum = 0;
 
-			["deceased", "intensive", "symptoms", "home", "cases"].forEach(stat => {
-				const f = this.lines[stat].f(t);
-				const last = y2Img((stat === "cases" ? 0 : sum) + f) * imgWidth * 4;
+			bands.forEach(stat => {
+				const f = stat === "white" ? 0 : this.lines[stat].f(t);
+				const last = stat === "white" ? 0 : y2Img((stat === "cases" ? 0 : sum) + f) * imgWidth * 4;
 				const { r, g, b } = rgb[stat];
 
 				for(; y > last; y -= step) {
-					back.data[y] = r;
-					back.data[y + 1] = g;
-					back.data[y + 2] = b;
-					back.data[y + 3] = 255;
+					img.data[y] = r;
+					img.data[y + 1] = g;
+					img.data[y + 2] = b;
+					img.data[y + 3] = 255;
 				}
 
 				sum += f;
 			});
 		}
 
-		ctx.putImageData(back, drawXOffset * imgScale, 0);
+		ctx.putImageData(img, drawXOffset * imgScale, 0);
+	}
+
+	drawFunctions() {
+		const { drawHeight, view2CanvasXScale, viewHeight, viewXmin, viewYmin } = this;
+		const view2CanvasYScale = drawHeight / viewHeight;
+
+		this.x2Canvas = x => (x - viewXmin) * view2CanvasXScale + drawXOffset;
+		this.y2Canvas = y => drawHeight - (y - viewYmin) * view2CanvasYScale;
+
+		this.x2t = x => Math.floor((x - drawXOffset) / view2CanvasXScale + viewXmin);
+		this.y2units = y => Math.floor((drawHeight - y) / view2CanvasYScale + viewYmin);
+	}
+
+	drawRecords() {
+		const { ctx, x2Canvas, y2Canvas } = this;
+		const { region } = this.props.parent.state;
 
 		records.forEach(([color, adds]) => {
 			const sum = day => adds.reduce((tot, stat) => tot + schema[region][0].recordset[stat][day], 0);
@@ -395,87 +423,100 @@ export class SurfaceChart extends Component {
 			schema[region][0].recordset.cases.forEach((e, i) => (i > 6 ? ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))) : null));
 			ctx.stroke();
 		});
+	}
 
-		const img = ctx.getImageData(drawXOffset * imgScale, 0, imgWidth, imgHeight);
+	drawXScale() {
+		const { canvasHeight, canvasWidth, ctx, drawHeight, img, imgHeight, imgWidth, view2CanvasXScale, view2ImgXScale, viewXmax, viewXmin, x2Canvas } = this;
+		const step = imgWidth * 4;
+		const x2Img = x => Math.floor((x - viewXmin) * view2ImgXScale);
 
-		const drawXScale = () => {
-			let steps = 1;
+		let steps = 1;
 
-			while(steps * view2CanvasXScale < 35) ++steps;
+		while(steps * view2CanvasXScale < 35) ++steps;
 
-			ctx.fillStyle = "#ffffff";
-			ctx.fillRect(drawXOffset, canvasHeight - drawYOffset, canvasWidth - drawXOffset, drawYOffset);
-			ctx.fillStyle = "#000000";
-			ctx.font = "12px Arial";
-			ctx.textAlign = "center";
-			ctx.textBaseline = "top";
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(drawXOffset, canvasHeight - drawYOffset, canvasWidth - drawXOffset, drawYOffset);
+		ctx.fillStyle = "#000000";
+		ctx.font = "12px Arial";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "top";
 
-			for(let t = Math.ceil(viewXmin); t < viewXmax; t += steps) {
-				const first = x2Img(t) * 4;
-				const last = imgWidth * imgHeight * 4;
+		for(let t = Math.ceil(viewXmin); t < viewXmax; t += steps) {
+			const first = x2Img(t) * 4;
+			const last = imgWidth * imgHeight * 4;
 
-				for(let i = first; i < last; i += step) {
-					img.data[i] = 64;
-					img.data[i + 1] = 64;
-					img.data[i + 2] = 64;
-					img.data[i + 3] = 255;
-				}
-
-				ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
-			}
-		};
-
-		const drawYScale = () => {
-			let next = true;
-			let scale = (viewYmax - viewYmin) / (drawHeight / 50);
-			let prev = 1;
-			let diff = scale;
-			let exp = 1;
-			let uni = 0;
-
-			while(next) {
-				if(uni === 0) uni = 1;
-				else if(uni === 1) uni = 2;
-				else if(uni === 2) uni = 5;
-				else {
-					uni = 1;
-					exp *= 10;
-				}
-
-				if(Math.abs(scale - uni * exp) < diff) {
-					prev = uni * exp;
-					diff = Math.abs(scale - prev);
-				} else {
-					next = false;
-					scale = prev;
-				}
+			for(let i = first; i < last; i += step) {
+				img.data[i] = 64;
+				img.data[i + 1] = 64;
+				img.data[i + 2] = 64;
+				img.data[i + 3] = 255;
 			}
 
-			ctx.fillStyle = "#ffffff";
-			ctx.fillRect(0, 0, drawXOffset, canvasHeight);
-			ctx.fillStyle = "#000000";
-			ctx.font = "12px Arial";
-			ctx.textAlign = "right";
-			ctx.textBaseline = "middle";
+			ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
+		}
+	}
 
-			for(let units = Math.floor(viewYmin / scale) * scale; units < viewYmax; units += scale) {
-				const first = imgWidth * 4 * y2Img(units);
-				const last = first + imgWidth * 4;
+	drawYScale() {
+		const { canvasHeight, ctx, drawHeight, img, imgHeight, imgWidth, view2ImgYScale, viewYmax, viewYmin, y2Canvas } = this;
+		const y2Img = y => imgHeight - Math.floor((y - viewYmin) * view2ImgYScale) - 1;
 
-				for(let i = first; i < last; i += 4) {
-					img.data[i] = 64;
-					img.data[i + 1] = 64;
-					img.data[i + 2] = 64;
-					img.data[i + 3] = 255;
-				}
+		let next = true;
+		let scale = (viewYmax - viewYmin) / (drawHeight / 50);
+		let prev = 1;
+		let diff = scale;
+		let exp = 1;
+		let uni = 0;
 
-				ctx.fillText(units, drawXOffset - 2, y2Canvas(units));
+		while(next) {
+			if(uni === 0) uni = 1;
+			else if(uni === 1) uni = 2;
+			else if(uni === 2) uni = 5;
+			else {
+				uni = 1;
+				exp *= 10;
 			}
-		};
 
-		drawYScale();
-		drawXScale();
+			if(Math.abs(scale - uni * exp) < diff) {
+				prev = uni * exp;
+				diff = Math.abs(scale - prev);
+			} else {
+				next = false;
+				scale = prev;
+			}
+		}
 
-		ctx.putImageData(img, drawXOffset * imgScale, 0);
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(0, 0, drawXOffset, canvasHeight);
+		ctx.fillStyle = "#000000";
+		ctx.font = "12px Arial";
+		ctx.textAlign = "right";
+		ctx.textBaseline = "middle";
+
+		for(let units = Math.floor(viewYmin / scale) * scale; units < viewYmax; units += scale) {
+			const first = imgWidth * 4 * y2Img(units);
+			const last = first + imgWidth * 4;
+
+			for(let i = first; i < last; i += 4) {
+				img.data[i] = 64;
+				img.data[i + 1] = 64;
+				img.data[i + 2] = 64;
+				img.data[i + 3] = 255;
+			}
+
+			ctx.fillText(units, drawXOffset - 2, y2Canvas(units));
+		}
+	}
+
+	redraw() {
+		const { ctx, imgHeight, imgWidth } = this;
+
+		this.drawRecords();
+
+		this.img = ctx.getImageData(drawXOffset * imgScale, 0, imgWidth, imgHeight);
+
+		this.drawYScale();
+		this.drawXScale();
+
+		ctx.putImageData(this.img, drawXOffset * imgScale, 0);
 	}
 }
