@@ -164,6 +164,7 @@ export class SurfaceChart extends Component {
 	constructor(props) {
 		super(props);
 
+		this.disableTimeout = 0;
 		this.disappeared = false;
 		this.prevProps = {};
 		this.state = {};
@@ -230,6 +231,10 @@ export class SurfaceChart extends Component {
 		if(this.forecastHandle) unregisterForecastsHandle(this.forecastHandle);
 	}
 
+	disableTooltip() {
+		this.disableTimeout = new Date().getTime() + 300;
+	}
+
 	getOffsets(event) {
 		const { clientX, clientY, target } = event;
 		const rect = target.getBoundingClientRect();
@@ -282,7 +287,7 @@ export class SurfaceChart extends Component {
 		const { clientX, clientY } = event;
 		const { offsetX, offsetY, originX, originY } = this.getOffsets(event);
 
-		if(offsetX < 0 || offsetY < 0) return this.tooltip.hide();
+		if(this.disableTimeout > new Date().getTime() || offsetX < 0 || offsetY < 0) return this.tooltip.hide();
 
 		this.tooltip.setState({ day: Math.floor(originX) + 1, units: Math.floor(originY), x: clientX, y: clientY });
 	}
@@ -403,7 +408,8 @@ export class SurfaceChart extends Component {
 
 		if(mobile && ! this.disappeared) return;
 
-		this.disableTimeout = new Date().getTime() + 300;
+		this.disableTooltip();
+
 		if(touches.length === 0) this.dragging = null;
 	}
 
@@ -422,6 +428,8 @@ export class SurfaceChart extends Component {
 			({ clientX, clientY } = touches[1]);
 			const pointB = { clientX, clientY };
 			const { originX, originY } = this.zooming;
+
+			this.disableTooltip();
 
 			if(this.animationFrame) return;
 
