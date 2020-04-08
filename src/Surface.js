@@ -287,9 +287,9 @@ export class SurfaceChart extends Component {
 		this.tooltip.setState({ day: Math.floor(originX) + 1, units: Math.floor(originY), x: clientX, y: clientY });
 	}
 
-	handleHorizontalZoom(event, scale) {
+	handleHorizontalZoom(event, scale, originX) {
 		const { chartXmax, chartXmin, drawWidth, imgWidth } = this;
-		const { offsetX, originX } = this.getOffsets(event);
+		const { offsetX } = this.getOffsets(event);
 
 		this.viewWidth *= scale;
 
@@ -324,9 +324,9 @@ export class SurfaceChart extends Component {
 		}
 	}
 
-	handleVerticalZoom(event, scale) {
+	handleVerticalZoom(event, scale, originY) {
 		const { chartYmax, chartYmin, drawHeight, imgHeight } = this;
-		const { offsetY, originY } = this.getOffsets(event);
+		const { offsetY } = this.getOffsets(event);
 
 		if(scale < 1) {
 			this.viewHeight /= 1.1;
@@ -421,24 +421,27 @@ export class SurfaceChart extends Component {
 			const pointA = { clientX, clientY };
 			({ clientX, clientY } = touches[1]);
 			const pointB = { clientX, clientY };
+			const { originX, originY } = this.zooming;
 
 			if(this.animationFrame) return;
 
 			if(Math.abs(pointA.clientX - pointB.clientX) > 30) {
 				this.handleHorizontalZoom(
 					{ clientX: (pointA.clientX + pointB.clientX) / 2, clientY: 0, target: touches[0].target },
-					Math.min(1.2, Math.max(1 / 1.2, Math.abs((this.zooming.pointA.clientX - this.zooming.pointB.clientX) / (pointA.clientX - pointB.clientX))))
+					Math.min(1.2, Math.max(1 / 1.2, Math.abs((this.zooming.pointA.clientX - this.zooming.pointB.clientX) / (pointA.clientX - pointB.clientX)))),
+					originX
 				);
 			}
 
 			if(Math.abs(pointA.clientY - pointB.clientY) > 30) {
 				this.handleVerticalZoom(
 					{ clientX: 0, clientY: (pointA.clientY + pointB.clientY) / 2, target: touches[0].target },
-					Math.min(1.2, Math.max(1 / 1.2, Math.abs((this.zooming.pointA.clientY - this.zooming.pointB.clientY) / (pointA.clientY - pointB.clientY))))
+					Math.min(1.2, Math.max(1 / 1.2, Math.abs((this.zooming.pointA.clientY - this.zooming.pointB.clientY) / (pointA.clientY - pointB.clientY)))),
+					originY
 				);
 			}
 
-			this.zooming = { pointA, pointB };
+			this.zooming = { pointA, pointB, originX, originY };
 
 			this.redraw();
 		}
@@ -463,10 +466,12 @@ export class SurfaceChart extends Component {
 			({ clientX, clientY } = touches[1]);
 			const pointB = { clientX, clientY };
 
+			const { originX, originY } = this.getOffsets({ clientX: (pointA.clientX + pointB.clientX) / 2, clientY: (pointA.clientY + pointB.clientY) / 2, target: touches[0].target });
+
 			this.dragging = null;
 			this.tooltip.hide();
 
-			this.zooming = { pointA, pointB };
+			this.zooming = { pointA, pointB, originX, originY };
 		}
 	}
 
@@ -474,10 +479,11 @@ export class SurfaceChart extends Component {
 		if(this.dragging) return;
 
 		const { clientX, clientY, deltaY, shiftKey, target } = event;
+		const { originX, originY } = this.getOffsets(event);
 		const scale = deltaY > 0 ? 1.1 : 1 / 1.1;
 
-		if(shiftKey) this.handleVerticalZoom(event, scale);
-		else this.handleHorizontalZoom(event, scale);
+		if(shiftKey) this.handleVerticalZoom(event, scale, originY);
+		else this.handleHorizontalZoom(event, scale, originX);
 
 		this.redraw(() => this.handleToolTip({ clientX, clientY, target }));
 	}
