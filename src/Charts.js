@@ -40,8 +40,10 @@ export class Charts extends Component {
 					forecast = this.checks[++current];
 				} else return;
 
-				const { region, stat } = forecast;
+				const { city, region, stat } = forecast;
 				const { model } = schema[region][0].forecasts[stat];
+
+				console.log(schema[region][city].name, city ? city : region);
 
 				if(model) {
 					model.beta0.forEach(e => console.log("beta0: ", e));
@@ -96,9 +98,18 @@ export class Charts extends Component {
 				this.cityOptions.forEach(cities => cities.sort((a, b) => (a.props.children === "-" ? -1 : b.props.children === "-" ? 1 : a.props.children < b.props.children ? -1 : 1)));
 				this.setState({});
 
-				this.checks = Object.keys(stats)
-					.filter(stat => stat !== "tests")
-					.reduce((ret, stat) => [...ret, ...schema.map((e, region) => ({ region, stat }))], []);
+				this.checks = [
+					...Object.keys(stats)
+						.filter(stat => stat !== "tests")
+						.reduce((ret, stat) => [...ret, ...schema.map((e, region) => ({ city: 0, region, stat }))], []),
+					...schema
+						.map((cities, region) =>
+							Object.keys(cities)
+								.filter(city => city !== "0")
+								.map(city => ({ city, region, stat: "cases" }))
+						)
+						.reduce((res, e) => [...res, ...e], [])
+				];
 			}
 		});
 	}
