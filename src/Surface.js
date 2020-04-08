@@ -241,26 +241,11 @@ export class SurfaceChart extends Component {
 		return { offsetX, offsetY, originX, originY };
 	}
 
-	handleMouseDown(event) {
-		const { button, clientX, clientY } = event;
-		const { viewXmax, viewXmin, viewYmax, viewYmin } = this;
-
-		if(button) return;
-
-		this.dragging = { clientX, clientY, viewXmax, viewXmin, viewYmax, viewYmin };
-		this.tooltip.hide();
-	}
-
-	handleMouseMove(event) {
-		if(mobile) return;
-
-		if(! this.dragging) {
-			if(this.hideTimeout) clearTimeout(this.hideTimeout);
-
-			return this.handleToolTip(event);
-		}
-
+	handleDrag(event) {
 		const { chartXmax, chartXmin, chartYmax, chartYmin, dragging, view2CanvasXScale, view2CanvasYScale, viewHeight, viewWidth } = this;
+
+		if(! dragging) return;
+
 		const { clientX, clientY, viewXmax, viewXmin, viewYmax, viewYmin } = dragging;
 		const dragX = (clientX - event.clientX) / view2CanvasXScale;
 		const dragY = (event.clientY - clientY) / view2CanvasYScale;
@@ -293,20 +278,6 @@ export class SurfaceChart extends Component {
 		this.redraw();
 	}
 
-	handleMouseOut() {
-		if(this.hideTimeout) clearTimeout(this.hideTimeout);
-
-		this.hideTimeout = setTimeout(() => this.tooltip.hide((this.hideTimeout = null)), 200);
-	}
-
-	handleMouseUp(event) {
-		const { button } = event;
-
-		if(button) return;
-
-		this.dragging = null;
-	}
-
 	handleToolTip(event) {
 		const { clientX, clientY } = event;
 		const { offsetX, offsetY, originX, originY } = this.getOffsets(event);
@@ -316,58 +287,13 @@ export class SurfaceChart extends Component {
 		this.tooltip.setState({ day: Math.floor(originX) + 1, units: Math.floor(originY), x: clientX, y: clientY });
 	}
 
-	handleTouchEnd(event) {}
+	handleHorizontalZoom(event, scale) {
+		const { chartXmax, chartXmin, drawWidth, imgWidth } = this;
+		const { offsetX, originX } = this.getOffsets(event);
 
-	handleTouchMove(event) {
-		this.handleToolTip(event.touches[0]);
-	}
+		this.viewWidth *= scale;
 
-	handleTouchStart(event) {
-		this.handleToolTip(event.touches[0]);
-	}
-
-	handleWheel(event) {
-		if(this.dragging) return;
-
-		const { chartXmax, chartXmin, chartYmax, chartYmin, drawHeight, drawWidth, imgHeight, imgWidth } = this;
-		const { clientX, clientY, deltaY, shiftKey, target } = event;
-		const { offsetX, offsetY, originX, originY } = this.getOffsets(event);
-
-		if(shiftKey) {
-			if(deltaY < 0) {
-				this.viewHeight /= 1.1;
-				this.view2ImgYScale = imgHeight / this.viewHeight;
-
-				if(this.view2ImgYScale > 0.1) {
-					this.view2ImgYScale = 0.1;
-					this.viewHeight = imgHeight / this.view2ImgYScale;
-				}
-
-				this.view2CanvasYScale = drawHeight / this.viewHeight;
-
-				this.viewYmax = originY + offsetY / this.view2CanvasYScale;
-				this.viewYmin = this.viewYmax - this.viewHeight;
-			} else {
-				this.viewHeight *= 1.1;
-
-				if(this.viewHeight > this.viewHeightMax) this.viewHeight = this.viewHeightMax;
-
-				this.view2ImgYScale = imgHeight / this.viewHeight;
-				this.view2CanvasYScale = drawHeight / this.viewHeight;
-
-				this.viewYmax = originY + offsetY / this.view2CanvasYScale;
-
-				if(this.viewYmax > chartYmax) this.viewYmax = chartYmax;
-
-				this.viewYmin = this.viewYmax - this.viewHeight;
-
-				if(this.viewYmin < chartYmin) {
-					this.viewYmin = chartYmin;
-					this.viewYmax = this.viewYmin + this.viewHeight;
-				}
-			}
-		} else if(deltaY < 0) {
-			this.viewWidth /= 1.1;
+		if(scale < 1) {
 			this.view2ImgXScale = imgWidth / this.viewWidth;
 
 			if(this.view2ImgXScale > 100) {
@@ -380,8 +306,6 @@ export class SurfaceChart extends Component {
 			this.viewXmin = originX - (offsetX - drawXOffset) / this.view2CanvasXScale;
 			this.viewXmax = this.viewXmin + this.viewWidth;
 		} else {
-			this.viewWidth *= 1.1;
-
 			if(this.viewWidth > this.viewWidthMax) this.viewWidth = this.viewWidthMax;
 
 			this.view2ImgXScale = imgWidth / this.viewWidth;
@@ -398,6 +322,162 @@ export class SurfaceChart extends Component {
 				this.viewXmin = this.viewXmax - this.viewWidth;
 			}
 		}
+	}
+
+	handleVerticalZoom(event, scale) {
+		const { chartYmax, chartYmin, drawHeight, imgHeight } = this;
+		const { offsetY, originY } = this.getOffsets(event);
+
+		if(scale < 1) {
+			this.viewHeight /= 1.1;
+			this.view2ImgYScale = imgHeight / this.viewHeight;
+
+			if(this.view2ImgYScale > 0.1) {
+				this.view2ImgYScale = 0.1;
+				this.viewHeight = imgHeight / this.view2ImgYScale;
+			}
+
+			this.view2CanvasYScale = drawHeight / this.viewHeight;
+
+			this.viewYmax = originY + offsetY / this.view2CanvasYScale;
+			this.viewYmin = this.viewYmax - this.viewHeight;
+		} else {
+			this.viewHeight *= 1.1;
+
+			if(this.viewHeight > this.viewHeightMax) this.viewHeight = this.viewHeightMax;
+
+			this.view2ImgYScale = imgHeight / this.viewHeight;
+			this.view2CanvasYScale = drawHeight / this.viewHeight;
+
+			this.viewYmax = originY + offsetY / this.view2CanvasYScale;
+
+			if(this.viewYmax > chartYmax) this.viewYmax = chartYmax;
+
+			this.viewYmin = this.viewYmax - this.viewHeight;
+
+			if(this.viewYmin < chartYmin) {
+				this.viewYmin = chartYmin;
+				this.viewYmax = this.viewYmin + this.viewHeight;
+			}
+		}
+	}
+
+	mousedown(event) {
+		const { button, clientX, clientY } = event;
+		const { viewXmax, viewXmin, viewYmax, viewYmin } = this;
+
+		if(button) return;
+
+		this.dragging = { clientX, clientY, viewXmax, viewXmin, viewYmax, viewYmin };
+		this.tooltip.hide();
+	}
+
+	mousemove(event) {
+		if(mobile) return;
+
+		if(! this.dragging) {
+			if(this.hideTimeout) clearTimeout(this.hideTimeout);
+
+			return this.handleToolTip(event);
+		}
+
+		this.handleDrag(event);
+	}
+
+	mouseout() {
+		if(this.hideTimeout) clearTimeout(this.hideTimeout);
+
+		this.hideTimeout = setTimeout(() => this.tooltip.hide((this.hideTimeout = null)), 200);
+	}
+
+	mouseup(event) {
+		const { button } = event;
+
+		if(button) return;
+
+		this.dragging = null;
+	}
+
+	touchend(event) {
+		const { touches } = event;
+
+		if(mobile && ! this.disappeared) return;
+
+		this.disableTimeout = new Date().getTime() + 300;
+		if(touches.length === 0) this.dragging = null;
+	}
+
+	touchmove(event) {
+		const { touches } = event;
+
+		if(mobile && ! this.disappeared) return;
+
+		if(touches.length === 1) {
+			if(this.dragging) this.handleDrag(touches[0]);
+			this.handleToolTip(touches[0]);
+		}
+		if(touches.length === 2) {
+			let { clientX, clientY } = touches[0];
+			const pointA = { clientX, clientY };
+			({ clientX, clientY } = touches[1]);
+			const pointB = { clientX, clientY };
+
+			if(this.animationFrame) return;
+
+			if(Math.abs(pointA.clientX - pointB.clientX) > 30) {
+				this.handleHorizontalZoom(
+					{ clientX: (pointA.clientX + pointB.clientX) / 2, clientY: 0, target: touches[0].target },
+					Math.min(1.2, Math.max(1 / 1.2, Math.abs((this.zooming.pointA.clientX - this.zooming.pointB.clientX) / (pointA.clientX - pointB.clientX))))
+				);
+			}
+
+			if(Math.abs(pointA.clientY - pointB.clientY) > 30) {
+				this.handleVerticalZoom(
+					{ clientX: 0, clientY: (pointA.clientY + pointB.clientY) / 2, target: touches[0].target },
+					Math.min(1.2, Math.max(1 / 1.2, Math.abs((this.zooming.pointA.clientY - this.zooming.pointB.clientY) / (pointA.clientY - pointB.clientY))))
+				);
+			}
+
+			this.zooming = { pointA, pointB };
+
+			this.redraw();
+		}
+	}
+
+	touchstart(event) {
+		const { touches } = event;
+		const { disappeared, viewXmax, viewXmin, viewYmax, viewYmin } = this;
+
+		if(touches.length > 1 || disappeared || ! mobile) event.preventDefault();
+		if(mobile && ! this.disappeared) return;
+
+		if(touches.length === 1) {
+			const { clientX, clientY } = touches[0];
+
+			this.handleToolTip(touches[0]);
+			this.dragging = { clientX, clientY, viewXmax, viewXmin, viewYmax, viewYmin };
+		}
+		if(touches.length === 2) {
+			let { clientX, clientY } = touches[0];
+			const pointA = { clientX, clientY };
+			({ clientX, clientY } = touches[1]);
+			const pointB = { clientX, clientY };
+
+			this.dragging = null;
+			this.tooltip.hide();
+
+			this.zooming = { pointA, pointB };
+		}
+	}
+
+	wheel(event) {
+		if(this.dragging) return;
+
+		const { clientX, clientY, deltaY, shiftKey, target } = event;
+		const scale = deltaY > 0 ? 1.1 : 1 / 1.1;
+
+		if(shiftKey) this.handleVerticalZoom(event, scale);
+		else this.handleHorizontalZoom(event, scale);
 
 		this.redraw(() => this.handleToolTip({ clientX, clientY, target }));
 	}
@@ -410,18 +490,24 @@ export class SurfaceChart extends Component {
 				<div align="center" className="Error">{`${dict.error[language]} ${schema[region][0].name}`}</div>
 			) : (
 				<div>
-					<p id="tip">{mobile && ! this.disappeared ? dict.scroll[language] : dict[mobile ? "mobile" : "desktop"][language]}</p>
+					{mobile && ! this.disappeared ? (
+						<p id="tip" className="Blinking">
+							{dict.scroll[language]}
+						</p>
+					) : (
+						<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
+					)}
 					<div align="center">
 						<canvas
-							ref={ref => (this.canvas = ref)}
-							onMouseDown={event => this.handleMouseDown(event)}
-							onMouseMove={event => this.handleMouseMove(event)}
-							onMouseOut={event => this.handleMouseOut(event)}
-							onMouseUp={event => this.handleMouseUp(event)}
-							onTouchEnd={event => this.handleTouchEnd(event)}
-							onTouchMove={event => this.handleTouchMove(event)}
-							onTouchStart={event => this.handleTouchStart(event)}
-							onWheel={event => this.handleWheel(event)}
+							ref={ref => {
+								this.canvas = ref;
+
+								if(! ref) return;
+
+								["mousedown", "mousemove", "mouseout", "mouseup", "touchend", "touchmove", "touchstart", "wheel"].forEach(handler =>
+									ref.addEventListener(handler, event => this[handler](event), { passive: false })
+								);
+							}}
 						/>
 						<ToolTip language={language} parent={this} ref={ref => (this.tooltip = ref)} region={region} />
 					</div>
@@ -441,7 +527,6 @@ export class SurfaceChart extends Component {
 			if(this.disappeared) return;
 			if(newViewportHeight > this.viewportHeight) {
 				this.disappeared = true;
-				this.canvas.style.touchAction = "none";
 				this.setState({});
 			}
 		}

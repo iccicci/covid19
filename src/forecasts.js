@@ -318,7 +318,7 @@ export function gauss2() {
 		Srp = Sr;
 		Sr2p = Sr2;
 
-		//		if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
+		//if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
 
 		base.forEach(s => {
 			const line = lines[s];
