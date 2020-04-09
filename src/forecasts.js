@@ -20,6 +20,14 @@ const regressions = [
 
 let lastDay;
 
+function roundBeta(beta) {
+	return beta.map(e => Math.round(e * 1000) / 1000);
+}
+
+function logBeta(beta, step) {
+	console.log("beta" + step, roundBeta(beta));
+}
+
 function guessBetaPDF(data) {
 	let yMax = 0;
 	let tyMax;
@@ -32,7 +40,7 @@ function guessBetaPDF(data) {
 		return null;
 	});
 
-	return [yMax, tyMax, 10];
+	return [[yMax, tyMax, 10]];
 }
 
 let verbose;
@@ -63,20 +71,20 @@ function guessBetaCDF(data) {
 const models = {
 	derivate: {
 		beta0: data => {
-			const ret = guessBetaPDF(data);
+			const ret = guessBetaPDF(data)[0];
 
 			return [[ret[0] * 10, 40, 10]];
 		},
 		f:    ([a, b, c]) => t => (-a * (t - b) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c ** 2,
 		tMax: ([, b]) => 2 * b - 6
 	},
-	gauss: {
+	normal: {
 		beta2: data => {
-			const ret = guessBetaPDF(data);
+			const ret = guessBetaPDF(data)[0];
 
 			return [[(ret[0] / 3) * 2, (ret[1] / 3) * 2, 20, 2]];
 		},
-		beta0: data => [guessBetaPDF(data)],
+		beta0: guessBetaPDF,
 		f2:    ([a, b, c, d]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2)),
 		f:     ([a, b, c]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)),
 		tMax:  ([, b]) => 2 * b - 6
@@ -96,7 +104,7 @@ const models = {
 
 const rounds = 8;
 
-export function gauss(data, stat, region, city) {
+function distributions(data, stat, region, city) {
 	if(! checkExclude) {
 		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
 		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
@@ -106,8 +114,8 @@ export function gauss(data, stat, region, city) {
 	const t = data.map(([t]) => t);
 	const beta0 = m.beta0(data);
 
-	verbose = city === "-" && region === 3;
-	if(verbose) console.log("region", region, "city", city, schema[region][0].name);
+	//verbose = city === "0" && region === 16 && (stat === "healed" || stat === "cases");
+	if(verbose) console.log("region", region, "city", city, schema[region][0].name, stat);
 
 	let betas = m.beta0(data);
 	//let Srp = 1e20;
@@ -167,19 +175,18 @@ export function gauss(data, stat, region, city) {
 
 				beta = Beta.data.map(e => e[0]);
 
+				if(verbose) logBeta(beta, s + 1);
+
+
 				if(beta[0] < 0) throw new Error("Negative variance");
 				if(beta[1] < 0) throw new Error("Negative peak");
 				if(beta[1] > 1000) throw new Error("Lost peak");
 			}
 
-			if(verbose) {
-				console.log(
-					"beta",
-					beta.map(e => Math.round(e * 100) / 100)
-				);
-			}
+			if(verbose) logBeta(beta, "F");
 
-			return { beta: beta.map(e => Math.round(e * 100) / 100), beta0, fs, tMax: city === "98" ? 80 : ceil(m.tMax(beta)) };
+
+			return { beta: roundBeta(beta), beta0, fs, tMax: city === "98" ? 80 : ceil(m.tMax(beta)) };
 		} catch(e) {
 			if(verbose) console.log(e.message);
 		}
@@ -188,12 +195,12 @@ export function gauss(data, stat, region, city) {
 	throw new Error("no");
 }
 
-export function gaussChart(data, stat, region, city) {
+function distributionsChart(data, stat, region, city) {
 	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
 	const ret = [];
-	const { beta, beta0, fs, tMax } = gauss(data, stat, region, city);
+	const { beta, beta0, fs, tMax } = distributions(data, stat, region, city);
 
-	if(true) {
+	if(checkExclude) {
 		for(let s = 0; s < rounds; ++s) {
 			const dataPoints = [];
 			let f = fs[s];
@@ -232,7 +239,7 @@ const functions = {
 		model: "integral"
 	},
 	p: {
-		model: "gauss"
+		model: "normal"
 	}
 };
 
@@ -403,7 +410,7 @@ export function gauss2() {
 	for(let t = 6; t <= tMax; ++t) data.push([t, fs[7].h(t)]);
 	console.log("prova", data);
 	try {
-		gauss(data, "integral");
+		distributions(data, "integral");
 	} catch(e) {}
 	*/
 
@@ -450,8 +457,8 @@ function calculateForecasts(region, entry, entries) {
 
 		if(stats[stat].model) {
 			try {
-				const { beta, beta0, fs, tMax } = gauss(data, stat, region, city);
-				chart = gaussChart(data, stat, region, city);
+				const { beta, beta0, fs, tMax } = distributions(data, stat, region, city);
+				chart = distributionsChart(data, stat, region, city);
 				model = { beta, beta0, f: fs[7], tMax };
 			} catch(e) {}
 		}

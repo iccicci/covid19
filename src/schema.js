@@ -1,24 +1,24 @@
 export const stats = {
 	healed:   { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, model: "integral", source: "dimessi_guariti", url: "h" },
-	home:     { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, model: "gauss", source: "isolamento_domiciliare", url: "a" },
+	home:     { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, model: "normal", source: "isolamento_domiciliare", url: "a" },
 	symptoms: {
 		color:  "magenta",
 		desc:   { e: "hospitalized with symptoms", i: "ricoverati con sintomi" },
 		legend: { e: "symptoms", i: "sintomi" },
-		model:  "gauss",
+		model:  "normal",
 		source: "ricoverati_con_sintomi",
 		url:    "s"
 	},
-	intensive:    { color: "purple", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, model: "gauss", source: "terapia_intensiva", url: "i" },
+	intensive:    { color: "purple", desc: { e: "intensive care", i: "terapia intensiva" }, legend: { e: "intensive", i: "intensiva" }, model: "normal", source: "terapia_intensiva", url: "i" },
 	hospitalized: {
 		color:  "brown",
 		desc:   { e: "gross hospitalized", i: "totale ospedalizzati" },
 		legend: { e: "hospitalized", i: "ospedalizzati" },
-		model:  "gauss",
+		model:  "normal",
 		source: "totale_ospedalizzati",
 		url:    "b"
 	},
-	positives: { color: "violet", desc: { e: "gross positives", i: "totale positivi" }, legend: { e: "positives", i: "positivi" }, model: "gauss", source: "totale_positivi", url: "p" },
+	positives: { color: "violet", desc: { e: "gross positives", i: "totale positivi" }, legend: { e: "positives", i: "positivi" }, model: "normal", source: "totale_positivi", url: "p" },
 	change:    {
 		color:  "blue",
 		desc:   { e: "gross positives ghange", i: "variazione totale positivi" },
@@ -27,7 +27,7 @@ export const stats = {
 		source: "variazione_totale_positivi",
 		url:    "n"
 	},
-	new:      { color: "cyan", desc: { e: "new positives", i: "nuovi positivi" }, legend: { e: "new", i: "nuovi" }, model: "gauss", source: "nuovi_positivi", url: "e" },
+	new:      { color: "cyan", desc: { e: "new positives", i: "nuovi positivi" }, legend: { e: "new", i: "nuovi" }, model: "normal", source: "nuovi_positivi", url: "e" },
 	cases:    { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, model: "integral", source: "totale_casi", url: "c" },
 	deceased: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, model: "integral", source: "deceduti", url: "d" },
 	tests:    { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi", url: "t" }
