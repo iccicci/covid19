@@ -82,7 +82,7 @@ const models = {
 		tMax:  ([, b]) => 2 * b - 6
 	},
 	integral: {
-		beta2: data => {
+		beta3: data => {
 			const ret = guessBetaCDF(data)[0];
 
 			return [[ret[3] * 2, (ret[1] / 3) * 2, (ret[2] * 3) / 2, 2]];
@@ -98,8 +98,8 @@ const rounds = 8;
 
 export function gauss(data, stat, region, city) {
 	if(! checkExclude) {
-		if(region === 11 && stat === "symptoms") throw new Error("Exclude symptoms Marche");
-		if(region === 15 && stat === "home") throw new Error("Exclude home  Campania");
+		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
+		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
 	}
 
 	const m = models[stats[stat].model];
@@ -193,18 +193,18 @@ export function gaussChart(data, stat, region, city) {
 	const ret = [];
 	const { beta, beta0, fs, tMax } = gauss(data, stat, region, city);
 
-	/*
-	for(let s = 0; s < rounds; ++s) {
-		const dataPoints = [];
-		let f = fs[s];
+	if(true) {
+		for(let s = 0; s < rounds; ++s) {
+			const dataPoints = [];
+			let f = fs[s];
 
-		for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
+			for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
 
-		ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}`, legend: () => null });
+			ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}`, legend: () => null });
+		}
+
+		return ret;
 	}
-
-	return ret;
-	*/
 
 	const dataPoints = [];
 	let f = fs[7];

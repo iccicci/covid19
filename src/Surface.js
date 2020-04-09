@@ -206,7 +206,7 @@ export class SurfaceChart extends Component {
 					let error = false;
 					let tmax = 0;
 
-					Object.keys(stats).forEach(stat => (stat !== "tests" && ! schema[region][0].forecasts[stat].model ? (error = true) : null));
+					relevant.forEach(stat => (stat !== "tests" && ! schema[region][0].forecasts[stat].model ? (error = true) : null));
 
 					if(error) return this.setState({ error: true });
 
