@@ -1,4 +1,6 @@
 export const stats = {
+	cases:    { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, model: "integral", source: "totale_casi", url: "c" },
+	deceased: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, model: "integral", source: "deceduti", url: "d" },
 	healed:   { color: "green", desc: { e: "healed", i: "dimessi guariti" }, legend: { e: "healed", i: "guariti" }, model: "integral", source: "dimessi_guariti", url: "h" },
 	home:     { color: "orange", desc: { e: "home isolation", i: "isolamento domiciliare" }, legend: { e: "home", i: "domiciliare" }, model: "normal", source: "isolamento_domiciliare", url: "a" },
 	symptoms: {
@@ -27,10 +29,8 @@ export const stats = {
 		source: "variazione_totale_positivi",
 		url:    "n"
 	},
-	new:      { color: "cyan", desc: { e: "new positives", i: "nuovi positivi" }, legend: { e: "new", i: "nuovi" }, model: "normal", source: "nuovi_positivi", url: "e" },
-	cases:    { color: "red", desc: { e: "cases", i: "casi" }, legend: { e: "cases", i: "casi" }, model: "integral", source: "totale_casi", url: "c" },
-	deceased: { color: "black", desc: { e: "deceased", i: "deceduti" }, legend: { e: "deceased", i: "deceduti" }, model: "integral", source: "deceduti", url: "d" },
-	tests:    { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi", url: "t" }
+	new:   { color: "cyan", desc: { e: "new positives", i: "nuovi positivi" }, legend: { e: "new", i: "nuovi" }, model: "normal", source: "nuovi_positivi", url: "e" },
+	tests: { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi", url: "t" }
 };
 
 export const groups = {
@@ -149,9 +149,12 @@ function refresh() {
 							};
 
 							handles(Object.entries(schemaHandles), 0);
-						});
-				});
-		});
+						})
+						.catch(e => console.log(e));
+				})
+				.catch(e => console.log(e));
+		})
+		.catch(e => console.log(e));
 }
 
 export function registerSchemaHandle(handle) {

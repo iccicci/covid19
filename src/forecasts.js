@@ -9,6 +9,7 @@ const SQRTPI2 = sqrt(PI / 2);
 const regressionsHandles = {};
 const regressionsHandlesMap = [];
 const regressionColors = ["#000000", "#505050", "#a0a0a0"];
+const tMax = 100;
 
 const regressions = [
 	{ filter: () => 1, func: "linear", legend: { i: "lineare", e: "linear" }, order: {} },
@@ -63,168 +64,216 @@ function guessBetaCDF(data) {
 		}
 	}
 
-	if(verbose) console.log("mmax", mMax, "t mmax", tmMax, "y mmax", data[tmMax - 6]);
+	if(verbose) console.log("mmax", mMax, "t mmax", tmMax, "y mmax", data[tmMax - 6][1]);
 
 	return [[mMax, tmMax, data[tmMax - 6][1] / mMax, data[tmMax - 6][1]]];
 }
 
 const models = {
 	derivate: {
-		beta0: data => {
-			const ret = guessBetaPDF(data)[0];
+		normal: {
+			beta0: data => {
+				const ret = guessBetaPDF(data)[0];
 
-			return [[ret[0] * 10, 40, 10]];
-		},
-		f:    ([a, b, c]) => t => (-a * (t - b) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c ** 2,
-		tMax: ([, b]) => 2 * b - 6
+				return [[ret[0] * 10, 40, 10]];
+			},
+			f: ([a, b, c]) => t => (-a * (t - b) * exp(-((b - t) ** 2) / (2 * c ** 2))) / c ** 2
+		}
 	},
 	normal: {
-		beta2: data => {
-			const ret = guessBetaPDF(data)[0];
-
-			return [[(ret[0] / 3) * 2, (ret[1] / 3) * 2, 20, 2]];
+		normal: {
+			beta0: guessBetaPDF,
+			f:     ([a, b, c]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2))
 		},
-		beta0: guessBetaPDF,
-		f2:    ([a, b, c, d]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2)),
-		f:     ([a, b, c]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)),
-		tMax:  ([, b]) => 2 * b - 6
+		skew: {
+			beta0: data => {
+				const ret = guessBetaPDF(data)[0];
+				const a = (ret[0] / 3) * 2;
+				const b = (ret[1] / 3) * 2;
+
+				return [[a, b, 20, 2], [a / 2 * 3, b, 20, 2]];
+			},
+			f: ([a, b, c, d]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2))
+		}
 	},
 	integral: {
-		beta3: data => {
-			const ret = guessBetaCDF(data)[0];
-
-			return [[ret[3] * 2, (ret[1] / 3) * 2, (ret[2] * 3) / 2, 2]];
+		normal: {
+			beta0: guessBetaCDF,
+			f:     ([a, b, c, d]) => t => d - SQRTPI2 * a * c * erf((b - t) / (SQRT2 * c))
 		},
-		beta0: guessBetaCDF,
-		f2:    ([a, b, c, d]) => t => a * ((1 + erf((t - b) / c / SQRT2)) / 2 - 2 * T((t - b) / c, d)),
-		f:     ([a, b, c, d]) => t => d - SQRTPI2 * a * c * erf((b - t) / (SQRT2 * c)),
-		tMax:  ([, b]) => 2 * b - 6
+		skew: {
+			beta0: data => {
+				const pdf = guessBetaPDF(data)[0];
+				const ret = guessBetaCDF(data)[0];
+				const a = Math.max(ret[3] * 2, pdf[0]);
+				const b = (ret[1] / 3) * 2;
+				const c = (ret[2] * 3) / 2;
+
+				return [
+					[a, b, c, 2],
+					[a, (b * 3) / 2, c, 2],
+					[a, (b * 4) / 3, c, 2]
+				];
+			},
+			f: ([a, b, c, d]) => t => a * ((1 + erf((t - b) / c / SQRT2)) / 2 - 2 * T((t - b) / c, d))
+		}
 	}
 };
 
 const rounds = 8;
 
-function distributions(data, stat, region, city) {
+function distributions(data, distribution, stat, region, city) {
 	if(! checkExclude) {
-		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
-		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
+		if(region === 11 && stat === "healed") return { error: "Exclude symptoms Marche" };
+		if(region === 11 && stat === "healed") return { error: "Exclude symptoms Marche" };
 	}
+
+	//verbose = city === "0" && region === 11 && stat === "healed";
+	//verbose = city === "0" && region === 9 && stat === "healed";
+	//verbose = city === "0" && (region === 0 || region === 9) && stat === "healed";
+	//verbose = city === "0" && region === 0 && stat === "cases";
+
+	if(verbose) console.log("region", region, "city", city, schema[region][0].name, stat);
 
 	const m = models[stats[stat].model];
 	const t = data.map(([t]) => t);
-	const beta0 = m.beta0(data);
+	const beta0 = m[distribution].beta0(data);
+	const func = m[distribution].f;
+	const ret = [];
 
-	//verbose = city === "0" && region === 16 && (stat === "healed" || stat === "cases");
-	if(verbose) console.log("region", region, "city", city, schema[region][0].name, stat);
-
-	let betas = m.beta0(data);
+	let beta;
+	let betas = [...beta0];
+	let error = true;
+	let fs;
 	//let Srp = 1e20;
 	//let Sr2p = 1e20;
 
 	if(city === "98") betas = [[70, 20, 20, 900]];
 
-	for(let beta of betas) {
-		const fs = [];
+	for(let l = 0; l < betas.length && error; ++l) {
+		beta = betas[l];
+		error = false;
+		fs = [];
+
 		const rows = data.length;
 		const cols = beta.length;
 
 		if(verbose) console.log("beta0", beta);
 
-		try {
-			for(let s = 0; s < rounds; ++s) {
-				const f = m.f(beta);
+		for(let s = 0; s < rounds && ! error; ++s) {
+			const f = func(beta);
 
-				fs[s] = f;
+			fs[s] = f;
 
-				const r = Matrix.columnVector(data.map(([t, y]) => y - f(t)));
-				const Jrjs = [];
-				//const Sr = r.data.map(e => e[0]).reduce((t, e) => t + e, 0);
-				//const Sr2 = r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0);
+			const r = Matrix.columnVector(data.map(([t, y]) => y - f(t)));
+			const Jrjs = [];
 
-				//console.log(`beta${s}`, beta);
-				//console.log(`r${s}`, r);
-				//console.log(`Sr${s}`, Sr, Srp - Sr);
-				//console.log(`Sr2${s}`, Sr2, Sr2p - Sr2);
+			if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) error = "Sr2";
 
-				//Srp = Sr;
-				//Sr2p = Sr2;
+			for(let i = 0; i < rows; ++i) {
+				const row = [];
 
-				if(r.data.map(e => e[0]).reduce((t, e) => t + e ** 2, 0) > 1e20) throw new Error("Sr2");
+				for(let j = 0; j < cols; ++j) {
+					const beta1 = [...beta];
+					const beta2 = [...beta];
 
-				for(let i = 0; i < rows; ++i) {
-					const row = [];
+					beta1[j] -= 0.0001;
+					beta2[j] += 0.0001;
 
-					for(let j = 0; j < cols; ++j) {
-						const beta1 = [...beta];
-						const beta2 = [...beta];
-
-						beta1[j] -= 0.0001;
-						beta2[j] += 0.0001;
-
-						row.push((m.f(beta1)(t[i]) - m.f(beta2)(t[i])) / 0.0002);
-					}
-
-					Jrjs.push(row);
+					row.push((func(beta1)(t[i]) - func(beta2)(t[i])) / 0.0002);
 				}
 
-				const Jr = new Matrix(Jrjs);
-
-				//console.log(`Jr${s}`, Jr);
-
-				const Beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(Jr).mmul(r));
-
-				beta = Beta.data.map(e => e[0]);
-
-				if(verbose) logBeta(beta, s + 1);
-
-
-				if(beta[0] < 0) throw new Error("Negative variance");
-				if(beta[1] < 0) throw new Error("Negative peak");
-				if(beta[1] > 1000) throw new Error("Lost peak");
+				Jrjs.push(row);
 			}
 
-			if(verbose) logBeta(beta, "F");
+			beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(new Matrix(Jrjs)).mmul(r)).data.map(e => e[0]);
 
-
-			return { beta: roundBeta(beta), beta0, fs, tMax: city === "98" ? 80 : ceil(m.tMax(beta)) };
-		} catch(e) {
-			if(verbose) console.log(e.message);
-		}
-	}
-
-	throw new Error("no");
-}
-
-function distributionsChart(data, stat, region, city) {
-	const colors = ["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"];
-	const ret = [];
-	const { beta, beta0, fs, tMax } = distributions(data, stat, region, city);
-
-	if(checkExclude) {
-		for(let s = 0; s < rounds; ++s) {
-			const dataPoints = [];
-			let f = fs[s];
-
-			for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
-
-			ret.push({ color: colors[s], dataPoints, legendText: `s: ${s}`, legend: () => null });
+			if(verbose) logBeta(beta, s + 1);
+			if(beta[0] < 0) error = "Negative a";
+			if(stats[stat].model === "integral" && beta[3] < -5) error = "Negative d";
+			if(beta[1] < 0) error = "Negative peak";
+			if(beta[1] > 1000) error = "Lost peak";
+			if(beta[2] < 0) error = "Negative variance";
+			if(beta[2] > 1000) error = "Lost variance";
 		}
 
-		return ret;
+		if(verbose && error) console.log(error);
+
+		ret.push({ beta: roundBeta(beta), beta0: roundBeta(beta0[l]), error, fs });
 	}
-
-	const dataPoints = [];
-	let f = fs[7];
-
-	for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: Math.round(f(t)) });
-
-	const line = { beta, beta0, color: stat === "deceased" ? "#606060" : colors[7], dataPoints };
-
-	line.legend = language => (line.legendText = language === "i" ? "proiezione" : "forecast");
-
-	ret.push(line);
 
 	return ret;
+}
+
+const distributionAttempts = [
+	["skew", true],
+	["skew", false],
+	["normal", true],
+	["normal", false]
+];
+
+const colors = {
+	normal: [["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"]],
+	skew:   [
+		["#e07070", "#c06060", "#a05050", "#804040", "#603030", "#402020", "#201010", "#000000"],
+		["#70e070", "#60c060", "#50a050", "#408040", "#306030", "#204020", "#102010", "#000000"],
+		["#7070e0", "#6060c0", "#5050a0", "#404080", "#303060", "#202040", "#101020", "#000000"]
+	]
+};
+
+function distributionsChart(data, stat, region, city) {
+	const chart = [];
+	const model = {};
+
+	for(let i = 0; i < distributionAttempts.length; ++i) {
+		const [distribution, trick] = distributionAttempts[i];
+
+		if(trick || ! models[stats[stat].model][distribution]) continue;
+
+		const dists = distributions(data, distribution, stat, region, city);
+
+		model[distribution] = [];
+
+		for(let l = 0; l < dists.length; ++l) {
+			const { beta, beta0, error, fs } = dists[l];
+
+			model[distribution].push({ beta, beta0, error });
+
+			if(checkExclude) {
+				for(let s = 0; s < fs.length; ++s) {
+					const dataPoints = [];
+					let f = fs[s];
+
+					for(let t = 6; t <= tMax && t <= 120; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
+
+					chart.push({ color: colors[distribution][l][s], dataPoints, legendText: `s: ${s}`, legend: () => null });
+				}
+			}
+
+			if(! error) {
+				model.f = fs[rounds - 1];
+
+				if(! checkExclude) {
+					const dataPoints = [];
+					const { f } = model;
+
+					for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: Math.round(f(t)) });
+
+					const line = { color: stat === "deceased" ? "#606060" : "#000000", dataPoints };
+
+					line.legend = language => (line.legendText = language === "i" ? "proiezione" : "forecast");
+
+					chart.push(line);
+
+					return { chart: [line], error, model };
+				}
+
+				return { chart, error, model };
+			}
+		}
+	}
+
+	return checkExclude ? { chart, error: false, model } : { chart: [], error: true, model };
 }
 
 const functions = {
@@ -452,18 +501,27 @@ function calculateForecasts(region, entry, entries) {
 
 		const data = getData(stat, region, city);
 
-		let chart;
-		let model;
+		let chart,
+			error = true,
+			model;
 
-		if(stats[stat].model) {
-			try {
-				const { beta, beta0, fs, tMax } = distributions(data, stat, region, city);
-				chart = distributionsChart(data, stat, region, city);
-				model = { beta, beta0, f: fs[7], tMax };
-			} catch(e) {}
-		}
+		/*
+		if(stat === "healed" && schema[region][city].forecasts.cases.model.f && schema[region][city].forecasts.deceased.model.f) {
+			const data2 = [...data];
+			const offset = Math.max(schema[region][city].forecasts.cases.model.tMax, schema[region][city].forecasts.deceased.model.tMax) + 60;
+			const y = schema[region][city].forecasts.cases.model.f(offset) - schema[region][city].forecasts.deceased.model.f(offset);
 
-		if(! chart) {
+			for(let i = 0; i < 10; ++i) data2.push([offset + i, y]);
+
+			//if(city === "0" && ! region) debugger;
+
+			({ chart, error, model } = distributionsChart(data2, stat, region, city));
+		} else if(stats[stat].model) ({ chart, error, model } = distributionsChart(data, stat, region, city));
+		*/
+
+		if(stats[stat].model) ({ chart, error, model } = distributionsChart(data, stat, region, city));
+
+		if(error) {
 			chart = regressions
 				.map(f => {
 					const res = regression[f.func](data.filter(f.filter), { ...f.order, precision: 3 });

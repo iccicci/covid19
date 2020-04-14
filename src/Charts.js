@@ -46,8 +46,15 @@ export class Charts extends Component {
 				console.log(schema[region][city].name, city ? city : region);
 
 				if(model) {
-					model.beta0.forEach(e => console.log("beta0: ", e));
-					console.log("beta: ", model.beta);
+					Object.keys(model).forEach(distribution => {
+						if(distribution === "f") return;
+
+						model[distribution].forEach(e => {
+							console.log(distribution, "beta0: ", e.beta0);
+							console.log(distribution, "beta: ", e.beta);
+							if(e.error) console.log(distribution, "error: ", e.error);
+						});
+					});
 				}
 
 				this.setState({ forecasts: [] }, () => this.setState({ forecasts: [forecast] }));
