@@ -125,7 +125,8 @@ export class Charts extends Component {
 		const forecasts = [];
 		const state = { city: parseInt(city, 10), language, forecasts, region: parseInt(region, 10), view };
 
-		if(isNaN(state.city) || isNaN(state.region)) return {};
+		if(view !== "proiezioni" && view !== "andamento") return {};
+		if(isNaN(state.city) || isNaN(state.region)) return { view };
 
 		lines.split("").forEach(line =>
 			Object.entries(stats).forEach(([stat, details]) => {
