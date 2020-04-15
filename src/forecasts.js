@@ -104,7 +104,7 @@ const models = {
 
 const rounds = 8;
 
-function distributions(data, stat, region, city) {
+export function distributions(data, stat, region, city, guess) {
 	if(! checkExclude) {
 		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
 		if(region === 11 && stat === "healed") throw new Error("Exclude symptoms Marche");
@@ -112,12 +112,12 @@ function distributions(data, stat, region, city) {
 
 	const m = models[stats[stat].model];
 	const t = data.map(([t]) => t);
-	const beta0 = m.beta0(data);
+	const beta0 = guess ? [guess] : m.beta0(data);
 
 	//verbose = city === "0" && region === 16 && (stat === "healed" || stat === "cases");
 	if(verbose) console.log("region", region, "city", city, schema[region][0].name, stat);
 
-	let betas = m.beta0(data);
+	let betas = [...beta0];
 	//let Srp = 1e20;
 	//let Sr2p = 1e20;
 
@@ -177,14 +177,12 @@ function distributions(data, stat, region, city) {
 
 				if(verbose) logBeta(beta, s + 1);
 
-
 				if(beta[0] < 0) throw new Error("Negative variance");
 				if(beta[1] < 0) throw new Error("Negative peak");
 				if(beta[1] > 1000) throw new Error("Lost peak");
 			}
 
 			if(verbose) logBeta(beta, "F");
-
 
 			return { beta: roundBeta(beta), beta0, fs, tMax: city === "98" ? 80 : ceil(m.tMax(beta)) };
 		} catch(e) {

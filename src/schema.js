@@ -45,7 +45,7 @@ export const groups = {
 	tests: { desc: { e: "tests", i: "tamponi" }, state: { healed: 0, home: 0, symptoms: 0, intensive: 0, hospitalized: 0, positives: 0, change: 0, new: 0, cases: 0, deceased: 0, tests: 1 } }
 };
 
-export const checkExclude = false;
+export const checkExclude = true;
 export const date2day = {};
 export const day2date = [];
 export const schema = [];
@@ -89,10 +89,14 @@ function initRecordset() {
 	return recordset;
 }
 
-function refresh() {
+function refresh(fetch) {
 	const built = [];
 
-	setTimeout(refresh, 600000);
+	const timeout = setTimeout(() => refresh(fetch), 600000);
+
+	try {
+		timeout.unref();
+	} catch(e) {}
 
 	fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
 		.then(res => res.json())
@@ -168,4 +172,8 @@ export function unregisterSchemaHandle(key) {
 	delete schemaHandles[key];
 }
 
-refresh();
+try {
+	refresh(fetch);
+} catch(e) {
+	refresh(require("node-fetch"));
+}
