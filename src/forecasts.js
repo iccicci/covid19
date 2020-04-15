@@ -9,7 +9,8 @@ const SQRTPI2 = sqrt(PI / 2);
 const regressionsHandles = {};
 const regressionsHandlesMap = [];
 const regressionColors = ["#000000", "#505050", "#a0a0a0"];
-const tMax = 100;
+
+export const tMax = 120;
 
 const regressions = [
 	{ filter: () => 1, func: "linear", legend: { i: "lineare", e: "linear" }, order: {} },

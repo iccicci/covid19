@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 
 import { schema, stats } from "./schema";
-import { registerForecastsHandle, unregisterForecastsHandle } from "./forecasts";
+import { registerForecastsHandle, tMax, unregisterForecastsHandle } from "./forecasts";
 
 const dict = {
 	data:    { e: "data", i: "dato" },
@@ -105,7 +105,7 @@ class ToolTip extends Component {
 		const error = 100 * ["healed", "positives", "hospitalized"].reduce((avg, stat) => avg + single(stat), 0);
 
 		return (
-			<div className="Table" style={{ display, left, top }} onTouchStart={event => this.hide()}>
+			<div className="Table" style={{ display, left, top }} onTouchStart={() => this.hide()}>
 				<div className="TRow">
 					<div className="TCellL">{dict.day[language]}:</div>
 					<div className="TCellR">{date}</div>
@@ -204,23 +204,19 @@ export class SurfaceChart extends Component {
 					this.retrivedData = true;
 
 					let error = false;
-					let tmax = 0;
 
-					relevant.forEach(stat => (stat !== "tests" && ! schema[region][0].forecasts[stat].model ? (error = true) : null));
+					relevant.forEach(stat => (stat !== "tests" && ! schema[region][0].forecasts[stat].model.f ? (error = true) : null));
 
 					if(error) return this.setState({ error: true });
 
 					relevant.forEach(stat => {
 						const { data, model } = schema[region][0].forecasts[stat];
-						const { f, tMax } = model;
-
-						if(tmax < tMax) tmax = tMax;
+						const { f } = model;
 
 						lines[stat] = { data, f };
 					});
 
 					this.lines = lines;
-					this.tMax = tmax;
 					this.setState({ error }, () => this.resize());
 				});
 			}
@@ -565,9 +561,9 @@ export class SurfaceChart extends Component {
 	}
 
 	draw() {
-		const { canvas, canvasWidth, canvasHeight, imgScale, lines, tMax } = this;
+		const { canvas, canvasWidth, canvasHeight, imgScale, lines } = this;
 
-		if(! this.tMax) return;
+		if(! this.lines) return;
 		if(! this.canvas) return;
 
 		canvas.width = canvasWidth * imgScale;
