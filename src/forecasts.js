@@ -1,5 +1,6 @@
 import { Matrix, pseudoInverse } from "ml-matrix";
 import { checkExclude, day2date, getData, registerSchemaHandle, stats, schema } from "./schema";
+import { precalc } from "./precalc";
 import { T } from "owen-s-t-function";
 import erf from "math-erf";
 import regression from "regression";
@@ -92,7 +93,10 @@ const models = {
 				const a = (ret[0] / 3) * 2;
 				const b = (ret[1] / 3) * 2;
 
-				return [[a, b, 20, 2], [a / 2 * 3, b, 20, 2]];
+				return [
+					[a, b, 20, 2],
+					[(a / 2) * 3, b, 20, 2]
+				];
 			},
 			f: ([a, b, c, d]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2))
 		}
@@ -121,7 +125,7 @@ const models = {
 	}
 };
 
-const rounds = 8;
+const rounds = 15;
 
 export function distributions(data, distribution, stat, region, city, guess) {
 	if(! checkExclude) {
@@ -190,14 +194,43 @@ export function distributions(data, distribution, stat, region, city, guess) {
 			beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(new Matrix(Jrjs)).mmul(r)).data.map(e => e[0]);
 
 			if(verbose) logBeta(beta, s + 1);
+			/*
 			if(beta[0] < 0) error = "Negative a";
-			if(stats[stat].model === "integral" && beta[3] < -5) error = "Negative d";
+			if(beta[0] > 100000) error = "Lost a";
+			if(distribution === "normal") {
+				if(stats[stat].model === "integral" && beta[3] < -5) error = "Negative d";
+			} else if(stats[stat].model === "integral") {
+				if(beta[3] > 50) error = "lost alpha";
+				if(beta[3] < -10) error = "negative alpha";
+			}
 			if(beta[1] < 0) error = "Negative peak";
 			if(beta[1] > 1000) error = "Lost peak";
-			if(beta[2] < 0) error = "Negative variance";
+			if(beta[2] < 2) error = "Negative variance";
 			if(beta[2] > 1000) error = "Lost variance";
+			*/
 		}
 
+		if(stats[stat].model === "integral") {
+			if(distribution === "skew") {
+				if(beta[0] < 0) error = "Negative a";
+				if(beta[0] > 1000000) error = "Lost a";
+				if(beta[1] < 0) error = "Negative peak";
+				if(beta[1] > 1000) error = "Lost peak";
+				if(beta[2] < 2) error = "Negative variance";
+				if(beta[2] > 100) error = "Lost variance";
+				if(beta[3] > 50) error = "lost alpha";
+				if(beta[3] < -10) error = "negative alpha";
+			}
+		}
+
+		if(! error) {
+			const f = fs[rounds - 1];
+			const yMax = data.reduce((max, [, y]) => (max > y ? max : y), 0);
+			const Arr = data.reduce((s, [t, y]) => s + Math.abs(y - f(t)) / yMax, 0) / data.length;
+			console.log(yMax, Arr, beta0[0], roundBeta(beta));
+
+			if(Arr > 0.1) error = "bad Sr";
+		}
 		if(verbose && error) console.log(error);
 
 		ret.push({ beta: roundBeta(beta), beta0: roundBeta(beta0[l]), error, fs });
@@ -231,7 +264,10 @@ function distributionsChart(data, stat, region, city) {
 
 		if(trick || ! models[stats[stat].model][distribution]) continue;
 
-		const dists = distributions(data, distribution, stat, region, city);
+		const dists =
+			false && distribution === "skew" && precalc[stat] && precalc[stat][region][city]
+				? distributions(data, distribution, stat, region, city, precalc[stat][region][city][0])
+				: distributions(data, distribution, stat, region, city);
 
 		model[distribution] = [];
 
@@ -245,7 +281,7 @@ function distributionsChart(data, stat, region, city) {
 					const dataPoints = [];
 					let f = fs[s];
 
-					for(let t = 6; t <= tMax && t <= 120; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
+					for(let t = 6; t <= tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) });
 
 					chart.push({ color: colors[distribution][l][s], dataPoints, legendText: `s: ${s}`, legend: () => null });
 				}
