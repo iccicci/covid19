@@ -40,7 +40,10 @@ function guessBetaPDF(data) {
 		return null;
 	});
 
-	return [[yMax, tyMax, 10]];
+	return [
+		[yMax, tyMax, 10],
+		[yMax, tyMax, 15]
+	];
 }
 
 let verbose;
@@ -177,14 +180,12 @@ function distributions(data, stat, region, city) {
 
 				if(verbose) logBeta(beta, s + 1);
 
-
 				if(beta[0] < 0) throw new Error("Negative variance");
 				if(beta[1] < 0) throw new Error("Negative peak");
 				if(beta[1] > 1000) throw new Error("Lost peak");
 			}
 
 			if(verbose) logBeta(beta, "F");
-
 
 			return { beta: roundBeta(beta), beta0, fs, tMax: city === "98" ? 80 : ceil(m.tMax(beta)) };
 		} catch(e) {
