@@ -43,7 +43,10 @@ function guessBetaPDF(data) {
 		return null;
 	});
 
-	return [[yMax, tyMax, 10]];
+	return [
+		[yMax, tyMax, 10],
+		[yMax, tyMax, 15]
+	];
 }
 
 let verbose;
