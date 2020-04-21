@@ -22,16 +22,28 @@ function register(region, city) {
 	};
 
 	const retry = (stat, beta0) => {
-		const aStep = beta0[0] / 10;
-		const aStop = beta0[0] * 2.05;
+		let yMax = 0;
+		let tyMax;
+
 		const data = getData(stat, region, city);
+
+		data.forEach(([t, y]) => {
+			if(y > yMax) {
+				tyMax = t;
+				yMax = y;
+			}
+		});
+
+		const aStart = yMax;
+		const aStep = yMax / 3;
+		const aStop = yMax * 4.05;
 
 		if(region !== 0 || city !== 0 || stat !== "healed") return;
 		console.log("retry", stat, region, city);
 
-		for(let a = beta0[0] * .7; a < aStop; a += aStep) {
-			for(let b = 15; b < 60; ++b) {
-				for(let c = 5; c < 80; ++c) {
+		for(let a = aStart; a < aStop; a += aStep) {
+			for(let b = 15; b < 80; b += 3) {
+				for(let c = 5; c < 40; c += 2) {
 					for(let d = -5; d < 20; ++d) {
 						const [{ beta, error }] = distributions(data, "skew", stat, region, city, [a, b, c, d]);
 

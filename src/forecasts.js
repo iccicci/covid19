@@ -1,4 +1,4 @@
-import { Matrix, pseudoInverse } from "ml-matrix";
+import { Matrix, inverse, pseudoInverse } from "ml-matrix";
 import { checkExclude, day2date, getData, registerSchemaHandle, stats, schema } from "./schema";
 import { precalc } from "./precalc";
 import { T } from "owen-s-t-function";
@@ -125,7 +125,7 @@ const models = {
 	}
 };
 
-const rounds = 15;
+const rounds = 8;
 
 export function distributions(data, distribution, stat, region, city, guess) {
 	if(! checkExclude) {
@@ -162,6 +162,8 @@ export function distributions(data, distribution, stat, region, city, guess) {
 
 		const rows = data.length;
 		const cols = beta.length;
+		const D = Matrix.eye(cols, cols);
+		const I = Matrix.eye(cols, cols);
 
 		if(verbose) console.log("beta0", beta);
 
@@ -191,35 +193,55 @@ export function distributions(data, distribution, stat, region, city, guess) {
 				Jrjs.push(row);
 			}
 
-			beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(new Matrix(Jrjs)).mmul(r)).data.map(e => e[0]);
+			let bestSr2 = 1e30;
+
+			const Beta = Matrix.columnVector(beta);
+			const Jr = new Matrix(Jrjs);
+			const JrT = Jr.transpose();
+			const JrT_Jr = JrT.mmul(Jr);
+			const JrT_r = JrT.mmul(r);
+
+			beta.forEach((e, i) => (D.data[i][i] = JrT_Jr.data[i][i]));
+
+			// eslint-disable-next-line no-loop-func
+			[false, true].forEach(diagonal => {
+				[0, 0.1, 0.2, 0.3, 0.5, 0.7, 1, 2, 3, 5, 7, 10].forEach(lambda => {
+					const LevenbergMarquardt = Matrix.add(JrT_Jr, Matrix.mul(diagonal ? D : I, lambda));
+					//const nextBeta = Matrix.sub(Beta, pseudoInverse(Jr).mmul(r)).data.map(e => e[0]);
+					const nextBeta = Matrix.sub(
+						Beta,
+						inverse(LevenbergMarquardt)
+							.mmul(JrT)
+							.mmul(r)
+					).data.map(e => e[0]);
+					const f = func(nextBeta);
+					const Sr2 = data.reduce((s, [t, y]) => s + (y - f(t)) ** 2, 0);
+
+					if(region === 0 && city === "0" && stat === "healed") console.log(diagonal, lambda, Sr2);
+
+					if(Sr2 < bestSr2) {
+						bestSr2 = Sr2;
+						beta = nextBeta;
+					}
+				});
+			});
+			if(region === 0 && city === "0" && stat === "healed") console.log(beta);
+			//beta = Matrix.sub(Matrix.columnVector(beta), pseudoInverse(new Matrix(Jrjs)).mmul(r)).data.map(e => e[0]);
 
 			if(verbose) logBeta(beta, s + 1);
-			/*
+
 			if(beta[0] < 0) error = "Negative a";
-			if(beta[0] > 100000) error = "Lost a";
-			if(distribution === "normal") {
-				if(stats[stat].model === "integral" && beta[3] < -5) error = "Negative d";
-			} else if(stats[stat].model === "integral") {
-				if(beta[3] > 50) error = "lost alpha";
-				if(beta[3] < -10) error = "negative alpha";
-			}
+			if(beta[0] > 1000000) error = "Lost a";
 			if(beta[1] < 0) error = "Negative peak";
 			if(beta[1] > 1000) error = "Lost peak";
 			if(beta[2] < 2) error = "Negative variance";
 			if(beta[2] > 1000) error = "Lost variance";
-			*/
-		}
 
-		if(stats[stat].model === "integral") {
-			if(distribution === "skew") {
-				if(beta[0] < 0) error = "Negative a";
-				if(beta[0] > 1000000) error = "Lost a";
-				if(beta[1] < 0) error = "Negative peak";
-				if(beta[1] > 1000) error = "Lost peak";
-				if(beta[2] < 2) error = "Negative variance";
-				if(beta[2] > 100) error = "Lost variance";
-				if(beta[3] > 50) error = "lost alpha";
-				if(beta[3] < -10) error = "negative alpha";
+			if(stats[stat].model === "integral") {
+				if(distribution === "skew") {
+					if(beta[3] > 2000) error = "lost alpha";
+					if(beta[3] < -10) error = "negative alpha";
+				}
 			}
 		}
 
@@ -227,9 +249,9 @@ export function distributions(data, distribution, stat, region, city, guess) {
 			const f = fs[rounds - 1];
 			const yMax = data.reduce((max, [, y]) => (max > y ? max : y), 0);
 			const Arr = data.reduce((s, [t, y]) => s + Math.abs(y - f(t)) / yMax, 0) / data.length;
-			console.log(yMax, Arr, beta0[0], roundBeta(beta));
+			//console.log(yMax, Arr, beta0[0], roundBeta(beta));
 
-			if(Arr > 0.1) error = "bad Sr";
+			//if(Arr > 0.07) error = "bad Sr";
 		}
 		if(verbose && error) console.log(error);
 
@@ -239,12 +261,7 @@ export function distributions(data, distribution, stat, region, city, guess) {
 	return ret;
 }
 
-const distributionAttempts = [
-	["skew", true],
-	["skew", false],
-	["normal", true],
-	["normal", false]
-];
+const distributionAttempts = ["skew", "normal"];
 
 const colors = {
 	normal: [["#e0e0e0", "#c0c0c0", "#a0a0a0", "#808080", "#606060", "#404040", "#202020", "#000000"]],
@@ -260,9 +277,9 @@ function distributionsChart(data, stat, region, city) {
 	const model = {};
 
 	for(let i = 0; i < distributionAttempts.length; ++i) {
-		const [distribution, trick] = distributionAttempts[i];
+		const distribution = distributionAttempts[i];
 
-		if(trick || ! models[stats[stat].model][distribution]) continue;
+		if(! models[stats[stat].model][distribution]) continue;
 
 		const dists =
 			false && distribution === "skew" && precalc[stat] && precalc[stat][region][city]

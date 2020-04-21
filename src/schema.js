@@ -45,7 +45,7 @@ export const groups = {
 	tests: { desc: { e: "tests", i: "tamponi" }, state: { healed: 0, home: 0, symptoms: 0, intensive: 0, hospitalized: 0, positives: 0, change: 0, new: 0, cases: 0, deceased: 0, tests: 1 } }
 };
 
-export const checkExclude = false;
+export const checkExclude = true;
 export const date2day = {};
 export const day2date = [];
 export const schema = [];
