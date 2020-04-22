@@ -30,7 +30,7 @@ export const stats = {
 		url:    "n"
 	},
 	new:   { color: "cyan", desc: { e: "new positives", i: "nuovi positivi" }, legend: { e: "new", i: "nuovi" }, model: "normal", source: "nuovi_positivi", url: "e" },
-	tests: { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, source: "tamponi", url: "t" }
+	tests: { color: "pink", desc: { e: "tests", i: "tamponi" }, legend: { e: "tests", i: "tamponi" }, model: "integral", source: "tamponi", url: "t" }
 };
 
 export const groups = {

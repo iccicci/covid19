@@ -19,7 +19,7 @@ const dict = {
 		)
 	},
 	err:      { e: "error", i: "errore" },
-	error:    { e: "Not enough data to produce a valid forecast for", i: "Non ci sono ancora abbastanza dati per fare una proiezione affidabile in" },
+	error:    { e: "Computing stats", i: "Calcolo statistiche in corso" },
 	forecast: { e: "forecast", i: "proiezione" },
 	mobile:   {
 		e: (
@@ -201,14 +201,6 @@ export class SurfaceChart extends Component {
 				this.unregisterHandle();
 				this.prevProps = prevProps;
 				this.forecastHandle = registerForecastsHandle(region, 0, () => {
-					this.retrivedData = true;
-
-					let error = false;
-
-					relevant.forEach(stat => (stat !== "tests" && ! schema[region][0].forecasts[stat].model.f ? (error = true) : null));
-
-					if(error) return this.setState({ error: true });
-
 					relevant.forEach(stat => {
 						const { data, model } = schema[region][0].forecasts[stat];
 						const { f } = model;
@@ -217,7 +209,7 @@ export class SurfaceChart extends Component {
 					});
 
 					this.lines = lines;
-					this.setState({ error }, () => this.resize());
+					this.setState({}, () => this.resize());
 				});
 			}
 		});
@@ -495,35 +487,33 @@ export class SurfaceChart extends Component {
 	render() {
 		const { language, region } = this.props.parent.state;
 
-		return this.retrivedData ? (
-			this.state.error ? (
-				<div align="center" className="Error">{`${dict.error[language]} ${schema[region][0].name}`}</div>
-			) : (
-				<div>
-					{mobile && ! this.disappeared ? (
-						<p id="tip" className="Blinking">
-							{dict.scroll[language]}
-						</p>
-					) : (
-						<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
-					)}
-					<div align="center">
-						<canvas
-							ref={ref => {
-								this.canvas = ref;
+		return ! this.lines ? (
+			<div align="center" className="Error">{dict.error[language]}</div>
+		) : (
+			<div>
+				{mobile && ! this.disappeared ? (
+					<p id="tip" className="Blinking">
+						{dict.scroll[language]}
+					</p>
+				) : (
+					<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
+				)}
+				<div align="center">
+					<canvas
+						ref={ref => {
+							this.canvas = ref;
 
-								if(! ref) return;
+							if(! ref) return;
 
-								["mousedown", "mousemove", "mouseout", "mouseup", "touchend", "touchmove", "touchstart", "wheel"].forEach(handler =>
-									ref.addEventListener(handler, event => this[handler](event), { passive: false })
-								);
-							}}
-						/>
-						<ToolTip language={language} parent={this} ref={ref => (this.tooltip = ref)} region={region} />
-					</div>
+							["mousedown", "mousemove", "mouseout", "mouseup", "touchend", "touchmove", "touchstart", "wheel"].forEach(handler =>
+								ref.addEventListener(handler, event => this[handler](event), { passive: false })
+							);
+						}}
+					/>
+					<ToolTip language={language} parent={this} ref={ref => (this.tooltip = ref)} region={region} />
 				</div>
-			)
-		) : null;
+			</div>
+		);
 	}
 
 	resize() {
@@ -544,8 +534,6 @@ export class SurfaceChart extends Component {
 		this.imgScale = window.devicePixelRatio;
 		this.viewportHeight = newViewportHeight;
 		this.viewportWidth = newViewportWidth;
-
-		if(this.state.error) return;
 
 		this.canvas.style.width = (this.canvasWidth = this.viewportWidth - 20) + "px";
 		this.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest + (this.disappeared || ! mobile ? 0 : 200)) + "px";
@@ -577,10 +565,8 @@ export class SurfaceChart extends Component {
 
 		for(let t = 6; t <= tMax; ++t) {
 			const yc = lines.cases.f(t);
-			const ys = lines.deceased.f(t) + lines.intensive.f(t) + lines.symptoms.f(t) + lines.home.f(t) + lines.healed.f(t);
 
 			if(yMax < yc) yMax = yc;
-			if(yMax < ys) yMax = ys;
 		}
 
 		this.chartXmin = 5.5;
