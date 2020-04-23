@@ -3,34 +3,6 @@
 	text-align: justify;
 }
 
-.Blinking {
-	transition: opacity 2s ease-in-out infinite;
-	animation: blinker 1s linear infinite;
-	opacity: 1;
-}
-
-@keyframes blinker {
-	0% {
-		opacity: 1;
-	}
-
-	20% {
-		opacity: 1;
-	}
-
-	50% {
-		opacity: 0.5;
-	}
-
-	80% {
-		opacity: 0;
-	}
-
-	100% {
-		opacity: 0;
-	}
-}
-
 .Content {
 	max-width: 1000px;
 	padding: 10px;
@@ -151,4 +123,9 @@ footer {
 
 p {
 	margin: 0px;
+}
+
+#root {
+	background-color: white;
+	color: black;
 }

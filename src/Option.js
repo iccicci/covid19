@@ -13,9 +13,9 @@ function toggleClass(event) {
 	event.target.classList.toggle("NoDecoration");
 }
 
-export function OptionLink({ desc, disabled, to }) {
+export function OptionLink({ desc, disabled, onClick, to }) {
 	return (
-		<Link to={to} onMouseOut={toggleClass} onMouseOver={toggleClass} style={disabled ? { color: "gray" } : {}}>
+		<Link to={to} onClick={onClick ? onClick : () => {}} onMouseOut={toggleClass} onMouseOver={toggleClass} style={disabled ? { color: "gray" } : {}}>
 			{desc}
 		</Link>
 	);

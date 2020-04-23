@@ -71,12 +71,20 @@ export class Home extends Component {
 					<h3>Il picco</h3>
 					<p>
 						Indipendentemente da quanto ho potuto constatare dal mio grafico, ero comunque cosciente che nel lungo periodo (ma speriamo più breve possibile) l’andamento delle curve avrebbe dovuto
-						assumere l’aspetto della campana di Gauss (e relativi integrali e derivate): l’andamento che rivela quando sarà il picco del contagio.
+						assumere l’aspetto della campana di Gauss (e relativi integrali e derivate), ossia una{" "}
+						<a href="https://en.wikipedia.org/wiki/Normal_distribution" target="_blank" rel="noopener noreferrer">
+							distribuzione normale
+						</a>
+						: l’andamento che rivela quando sarà il picco del contagio.
 					</p>
 					<p>Evidentemente non ero il solo ad avere questa consapevolezza: anche in televisione il tormentone “il picco” aveva spodestato l’ ”andamento esponenziale”.</p>
 					<p>
 						Chi ha adeguate conoscenze matematiche sa bene che non ha senso cercare di fare una proiezione di questo tipo all’inizio del fenomeno, ma in previsione che prima o poi il momento adatto
-						sarebbe arrivato ho aggiunto anche questo tipo di regressione. Nello specifico ho utilizzato l’algoritmo di Gauss-Newton, ma credo che questo interessi pochissime persone.
+						sarebbe arrivato ho aggiunto anche questo tipo di regressione. Nello specifico ho utilizzato{" "}
+						<a href="https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm" target="_blank" rel="noopener noreferrer">
+							l’algoritmo Gauss-Newton
+						</a>
+						, ma credo che questo interessi pochissime persone.
 					</p>
 					<p>
 						Considerazione matematiche a parte, piano piano i numeri hanno preso un andamento tale per cui anche queste proiezioni hanno iniziato ad avere un senso e finalmente ho potuto vedere
@@ -93,10 +101,17 @@ export class Home extends Component {
 					<p style={{ paddingTop: "10px" }}>
 						<img src={Andamento} alt="Andamento" className="Fit" />
 					</p>
-					<h3>E non finisce qui!</h3>
+					<h3>Distribuzione normale asimmetrica</h3>
 					<p>
-						In realtà l’andamento più plausibile è quello a “picco asimmetrico”, ma per ragioni simili a quelle citate poco fa, ancora non ha senso fare previsioni di questo tipo (ma le faremo, non
-						temete), quindi per ora, impiego il mio tempo continuando a lavorare per migliorare il grafico aggregato.
+						Ora che il picco è passato ho potuto ulteriormente modificare il mio modello utilizzando la{" "}
+						<a href="https://en.wikipedia.org/wiki/Skew_normal_distribution" target="_blank" rel="noopener noreferrer">
+							distribuzione normale asimmetrica
+						</a>
+						. Dato che le funzioni per questo sono decisamente più complesse, per avere della regressioni dei risultati migliori ho implementato{" "}
+						<a href="https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm" target="_blank" rel="noopener noreferrer">
+							l'algoritmo Levenberg-Marquardt
+						</a>
+						.
 					</p>
 				</div>
 			</div>

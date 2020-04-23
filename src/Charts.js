@@ -4,6 +4,8 @@ import { LinesChart } from "./Lines";
 import { Option, OptionLink } from "./Option";
 import { SurfaceChart } from "./Surface";
 
+const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
+
 const dict = {
 	by:       { e: "by", i: "a cura di" },
 	chart:    { e: "chart", i: "grafico" },
@@ -185,6 +187,16 @@ export class Charts extends Component {
 		const urlParams = this.getUrlParamsFromState();
 		const params = urlParams.split("/");
 
+		const exitFullscreen = done => {
+			if(document.fullscreenElement) document.exitFullscreen();
+			if(done) done();
+		};
+
+		const requestFullscreen = done => {
+			if(mobile) document.getElementById("root").requestFullscreen({ navigationUI: "hide" });
+			done();
+		};
+
 		if(this.url) window.history.pushState({}, null, this.url + urlParams);
 		params.shift();
 		params.shift();
@@ -193,10 +205,10 @@ export class Charts extends Component {
 		return (
 			<div className="App">
 				<p id="head">
-					<OptionLink desc="home" to={params.join("/")} />
+					<OptionLink desc="home" to={params.join("/")} onClick={() => exitFullscreen()} />
 					{" - " + dict.chart[language] + ": "}
-					<Option enabled={view !== "andamento"} desc={dict.lines[language]} onClick={() => this.setState({ view: "proiezioni" })} />
-					<Option enabled={view === "andamento"} desc={dict.surface[language]} onClick={() => this.setState({ view: "andamento" })} />
+					<Option enabled={view !== "andamento"} desc={dict.lines[language]} onClick={() => exitFullscreen(() => this.setState({ view: "proiezioni" }))} />
+					<Option enabled={view === "andamento"} desc={dict.surface[language]} onClick={() => requestFullscreen(() => this.setState({ view: "andamento" }))} />
 					{" - " + dict.language[language] + ": "}
 					<Option enabled={language === "e"} desc="english" onClick={() => this.setState({ language: "e" })} />
 					<Option enabled={language === "i"} desc="italiano" onClick={() => this.setState({ language: "i" })} />

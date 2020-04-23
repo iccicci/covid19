@@ -35,7 +35,7 @@ export class Header extends Component {
 					<p>previsioni andamento</p>
 				</div>
 				<div className="Header" id="Header">
-					Grafici: a <Link to={"/coronavirus/grafico/proiezioni" + path}>linee</Link> - ad <Link to={"/coronavirus/grafico/andamento" + path}>area</Link>
+					Vai al <Link to={"/coronavirus/grafico/proiezioni" + path}>grafico</Link>
 				</div>
 			</div>
 		);

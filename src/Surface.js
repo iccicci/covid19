@@ -34,7 +34,6 @@ const dict = {
 		)
 	},
 	record: { e: "record", i: "registrato" },
-	scroll: { e: <b>scroll up</b>, i: <b>scorri in su</b> },
 	units:  { e: "units", i: "unità" }
 };
 
@@ -165,7 +164,6 @@ export class SurfaceChart extends Component {
 		super(props);
 
 		this.disableTimeout = 0;
-		this.disappeared = false;
 		this.prevProps = {};
 		this.state = {};
 		this.viewportHeight = window.innerHeight;
@@ -394,8 +392,6 @@ export class SurfaceChart extends Component {
 	touchend(event) {
 		const { touches } = event;
 
-		if(mobile && ! this.disappeared) return;
-
 		this.disableTooltip();
 
 		if(touches.length === 0) this.dragging = null;
@@ -403,8 +399,6 @@ export class SurfaceChart extends Component {
 
 	touchmove(event) {
 		const { touches } = event;
-
-		if(mobile && ! this.disappeared) return;
 
 		if(touches.length === 1) {
 			if(this.dragging) this.handleDrag(touches[0]);
@@ -445,10 +439,9 @@ export class SurfaceChart extends Component {
 
 	touchstart(event) {
 		const { touches } = event;
-		const { disappeared, viewXmax, viewXmin, viewYmax, viewYmin } = this;
+		const { viewXmax, viewXmin, viewYmax, viewYmin } = this;
 
-		if(touches.length > 1 || disappeared || ! mobile) event.preventDefault();
-		if(mobile && ! this.disappeared) return;
+		if(touches.length > 1 || ! mobile) event.preventDefault();
 
 		if(touches.length === 1) {
 			const { clientX, clientY } = touches[0];
@@ -488,16 +481,12 @@ export class SurfaceChart extends Component {
 		const { language, region } = this.props.parent.state;
 
 		return ! this.lines ? (
-			<div align="center" className="Error">{dict.error[language]}</div>
+			<div align="center" className="Error">
+				{dict.error[language]}
+			</div>
 		) : (
 			<div>
-				{mobile && ! this.disappeared ? (
-					<p id="tip" className="Blinking">
-						{dict.scroll[language]}
-					</p>
-				) : (
-					<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
-				)}
+				<p id="tip">{dict[mobile ? "mobile" : "desktop"][language]}</p>
 				<div align="center">
 					<canvas
 						ref={ref => {
@@ -519,24 +508,14 @@ export class SurfaceChart extends Component {
 	resize() {
 		const newViewportHeight = window.innerHeight;
 		const newViewportWidth = window.innerWidth;
-		const newIsPortrait = newViewportHeight > newViewportWidth;
 		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight + document.getElementById("tip").clientHeight;
-
-		if(mobile) {
-			if(newIsPortrait !== this.isPortrait) window.location.reload();
-			if(this.disappeared) return;
-			if(newViewportHeight > this.viewportHeight) {
-				this.disappeared = true;
-				this.setState({});
-			}
-		}
 
 		this.imgScale = window.devicePixelRatio;
 		this.viewportHeight = newViewportHeight;
 		this.viewportWidth = newViewportWidth;
 
 		this.canvas.style.width = (this.canvasWidth = this.viewportWidth - 20) + "px";
-		this.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest + (this.disappeared || ! mobile ? 0 : 200)) + "px";
+		this.canvas.style.height = (this.canvasHeight = this.viewportHeight - 30 - rest) + "px";
 
 		if(this.animationFrame) {
 			window.cancelAnimationFrame(this.animationFrame);
