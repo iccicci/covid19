@@ -52,14 +52,14 @@ const rgb = {
 	white:     { r: 255, g: 255, b: 255 }
 };
 const tip = [
-	["cases", "#000000"],
-	["healed", "#00dd00"],
-	["positives", "#000000"],
-	["home", "#dddd00"],
-	["hospitalized", "#000000"],
-	["symptoms", "#ff8000"],
 	["intensive", "#dd0000"],
-	["deceased", "#c8641e"]
+	["symptoms", "#ff8000"],
+	["hospitalized", "#000000"],
+	["home", "#dddd00"],
+	["positives", "#000000"],
+	["deceased", "#c8641e"],
+	["healed", "#00dd00"],
+	["cases", "#000000"]
 ];
 
 const records = [
