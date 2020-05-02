@@ -5,6 +5,8 @@ const fs = require("fs");
 const morgan = require("morgan");
 const path = require("path");
 const { Worker } = require("worker_threads");
+// eslint-disable-next-line no-native-reassign
+require = require("esm")(module);
 const { date2day, schema, stats } = require("./client/src/schema");
 
 let data = {};

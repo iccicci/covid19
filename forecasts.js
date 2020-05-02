@@ -1,7 +1,9 @@
 const { Matrix, inverse } = require("ml-matrix");
 const { parentPort, workerData } = require("worker_threads");
-const { models, stats } = require("./client/src/schema");
 const regression = require("regression");
+// eslint-disable-next-line no-native-reassign
+require = require("esm")(module);
+const { models, stats } = require("./client/src/schema");
 
 const { abs } = Math;
 
