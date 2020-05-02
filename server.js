@@ -33,6 +33,8 @@ function daemon(daemonized) {
 		stream.write(toString.apply(null, arguments));
 	};
 
+	process.on("uncaughtException", (err, origin) => log(`Caught exception: ${err}\n` + `Exception origin: ${origin}`));
+
 	log("Init");
 
 	process.on("SIGTERM", () => log("Shutting down due to SIGTERM"));
