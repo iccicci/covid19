@@ -175,6 +175,7 @@ export class SurfaceChart extends Component {
 		this.refresh();
 		this.handleResize = () => this.resize();
 		window.addEventListener("resize", this.handleResize);
+		this.setState({});
 	}
 
 	componentDidUpdate() {

@@ -75,8 +75,10 @@ for(let i = 0; i < 300; ++i) {
 	day2date[i] = date;
 }
 
-function getData(stat, region, city) {
-	return schema[region][city].recordset[stat].map((e, i) => [i, e]);
-}
-
-module.exports = { date2day, day2date, getData, groups, models, schema, stats, tMax };
+module.exports.date2day = date2day;
+module.exports.day2date = day2date;
+module.exports.groups = groups;
+module.exports.models = models;
+module.exports.schema = schema;
+module.exports.stats = stats;
+module.exports.tMax = tMax;
