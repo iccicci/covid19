@@ -3,43 +3,37 @@
 	"version": "0.0.1",
 	"private": false,
 	"dependencies": {
+		"daemon-control": "0.1.5",
+		"express": "4.17.1",
 		"math-erf": "1.0.0",
 		"ml-matrix": "6.4.1",
+		"morgan": "1.10.0",
+		"node-fetch": "2.6.0",
 		"owen-s-t-function": "1.0.0",
-		"react": "16.13.1",
-		"react-dom": "16.13.1",
-		"react-router-dom": "5.1.2",
-		"react-scripts": "3.4.1",
-		"regression": "2.0.1"
+		"regression": "2.0.1",
+		"rotating-file-stream": "2.1.0"
 	},
 	"devDependencies": {
 		"babel-eslint": "10.1.0",
+		"concurrently": "5.2.0",
 		"eslint": "6.8.0",
-		"esm": "3.2.25",
-		"node-fetch": "2.6.0",
-		"prettier": "2.0.5"
+		"eslint-plugin-flowtype": "4.7.0",
+		"eslint-plugin-import": "2.20.2",
+		"eslint-plugin-jsx-a11y": "6.2.3",
+		"eslint-plugin-react": "7.19.0",
+		"eslint-plugin-react-hooks": "3.0.0",
+		"nodemon": "2.0.3",
+		"prettier": "2.0.5",
+		"react": "16.13.1"
 	},
 	"licence": "MIT",
 	"repository": "https://github.com/iccicci/covid19.git",
 	"scripts": {
-		"start": "react-scripts start",
-		"build": "react-scripts build",
-		"test": "react-scripts test",
-		"eject": "react-scripts eject"
+		"start": "concurrently \"npm run server\" \"npm run client\"",
+		"server": "./node_modules/.bin/nodemon server.js nodaemon",
+		"client": "cd client && npm start"
 	},
 	"eslintConfig": {
 		"extends": "react-app"
-	},
-	"browserslist": {
-		"production": [
-			">0.2%",
-			"not dead",
-			"not op_mini all"
-		],
-		"development": [
-			"last 1 chrome version",
-			"last 1 firefox version",
-			"last 1 safari version"
-		]
 	}
 }

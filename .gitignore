@@ -1,4 +1,4 @@
-REACT.md
-build
-deploy
+client/build
+client/node_modules
+data.json
 node_modules

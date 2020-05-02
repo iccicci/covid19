@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { checkExclude, groups, registerSchemaHandle, schema, stats, unregisterSchemaHandle } from "./schema";
+import { groups, schema, stats } from "./schema";
 import { LinesChart } from "./Lines";
 import { Option, OptionLink } from "./Option";
 import { SurfaceChart } from "./Surface";
@@ -19,14 +19,16 @@ const dict = {
 };
 
 export class Charts extends Component {
-	constructor() {
-		super();
+	constructor(props) {
+		super(props);
 
-		this.state = { ...groups.all.state, city: 0, language: "i", forecasts: [], region: 0, view: "proiezioni" };
+		this.url = props.match.url;
+		this.urlParams = props.location.pathname.substr(this.url.length);
+		this.state = this.getStateFromUrlParams(this.urlParams);
 	}
 
 	componentDidMount() {
-		if(checkExclude) {
+		if(false) {
 			let current = -1;
 
 			this.keyEvent = event => {
@@ -42,106 +44,96 @@ export class Charts extends Component {
 					forecast = this.checks[++current];
 				} else return;
 
-				const { city, region, stat } = forecast;
-				const { model } = schema[region][0].forecasts[stat];
-
-				console.log(schema[region][city].name, city ? city : region);
-
-				if(model) {
-					Object.keys(model).forEach(distribution => {
-						if(distribution === "f") return;
-
-						model[distribution].forEach(e => {
-							console.log(distribution, "beta0: ", e.beta0);
-							console.log(distribution, "beta: ", e.beta);
-							if(e.error) console.log(distribution, "error: ", e.error);
-						});
-					});
-				}
-
 				this.setState({ forecasts: [] }, () => this.setState({ forecasts: [forecast] }));
 			};
 
 			window.addEventListener("keydown", this.keyEvent);
 		}
 
-		this.url = this.props.match.url;
-		this.urlParams = this.props.location.pathname.substr(this.url.length);
+		fetch("/data", { accept: "application/json" })
+			.then(res => res.json())
+			.then(res => {
+				res.forEach((e, i) => (schema[i] = e));
 
-		this.setState(this.getStateFromUrlParams(this.urlParams));
+				if(! this.regionOptions) {
+					this.cityOptions = [];
+					this.regionOptions = [];
 
-		this.schemaHandle = registerSchemaHandle(() => {
-			if(! this.regionOptions) {
-				this.cityOptions = [];
-				this.regionOptions = [];
+					schema.forEach((cities, region) => {
+						this.cityOptions[region] = [];
 
-				schema.forEach((cities, region) => {
-					this.cityOptions[region] = [];
+						Object.entries(cities).forEach(([city, set]) => {
+							if(city !== "0") {
+								return this.cityOptions[region].push(
+									<option key={city} value={city}>
+										{set.name}
+									</option>
+								);
+							}
 
-					Object.entries(cities).forEach(([city, set]) => {
-						if(city !== "0") {
-							return this.cityOptions[region].push(
-								<option key={city} value={city}>
+							if(region) {
+								this.cityOptions[region].push(
+									<option key={city} value={city}>
+										-
+									</option>
+								);
+							}
+
+							this.regionOptions.push(
+								<option key={region} value={region}>
 									{set.name}
 								</option>
 							);
-						}
-
-						if(region) {
-							this.cityOptions[region].push(
-								<option key={city} value={city}>
-									-
-								</option>
-							);
-						}
-
-						this.regionOptions.push(
-							<option key={region} value={region}>
-								{set.name}
-							</option>
-						);
+						});
 					});
-				});
 
-				this.regionOptions.sort((a, b) => (a.props.children === "Italia" ? -1 : b.props.children === "Italia" ? 1 : a.props.children < b.props.children ? -1 : 1));
-				this.cityOptions.forEach(cities => cities.sort((a, b) => (a.props.children === "-" ? -1 : b.props.children === "-" ? 1 : a.props.children < b.props.children ? -1 : 1)));
-				this.setState({});
+					this.regionOptions.sort((a, b) => (a.props.children === "Italia" ? -1 : b.props.children === "Italia" ? 1 : a.props.children < b.props.children ? -1 : 1));
+					this.cityOptions.forEach(cities => cities.sort((a, b) => (a.props.children === "-" ? -1 : b.props.children === "-" ? 1 : a.props.children < b.props.children ? -1 : 1)));
+					this.setState({});
 
-				this.checks = [
-					...Object.keys(stats)
-						.filter(stat => stat !== "tests")
-						.reduce((ret, stat) => [...ret, ...schema.map((e, region) => ({ city: 0, region, stat }))], []),
-					...schema
-						.map((cities, region) =>
-							Object.keys(cities)
-								.filter(city => city !== "0")
-								.map(city => ({ city, region, stat: "cases" }))
-						)
-						.reduce((res, e) => [...res, ...e], [])
-				];
-			}
-		});
+					this.checks = [
+						...Object.keys(stats)
+							.filter(stat => stat !== "tests")
+							.reduce((ret, stat) => [...ret, ...schema.map((e, region) => ({ city: 0, region, stat }))], []),
+						...schema
+							.map((cities, region) =>
+								Object.keys(cities)
+									.filter(city => city !== "0")
+									.map(city => ({ city, region, stat: "cases" }))
+							)
+							.reduce((res, e) => [...res, ...e], [])
+					];
+				}
+			});
 	}
 
 	componentWillUnmount() {
 		if(this.keyEvent) window.removeEventListener("keydown", this.keyEvent);
-
-		unregisterSchemaHandle(this.schemaHandle);
 	}
 
 	getStateFromUrlParams(params) {
-		const [, view, region, city, language, lines, ...rest] = params.split("/");
+		let [, view, region, city, language, lines, ...rest] = params.split("/");
 		const forecasts = [];
-		const state = { city: parseInt(city, 10), language, forecasts, region: parseInt(region, 10), view };
 
-		if(view !== "proiezioni" && view !== "andamento") return {};
-		if(isNaN(state.city) || isNaN(state.region)) return { view };
+		if(view !== "proiezioni" && view !== "andamento") view = "proiezioni";
+		if(language !== "i" && language !== "e") language = "i";
 
-		lines.split("").forEach(line =>
-			Object.entries(stats).forEach(([stat, details]) => {
-				if(details.url === line) state[stat] = true;
-			})
-		);
+		region = parseInt(region, 10);
+		if(isNaN(region)) region = 0;
+
+		city = parseInt(city, 10);
+		if(isNaN(city)) city = 0;
+
+		const state = { ...groups.all.state, city, language, forecasts, region, view };
+
+		if(lines) {
+			Object.keys(stats).forEach(stat => (state[stat] = 0));
+			lines.split("").forEach(line =>
+				Object.entries(stats).forEach(([stat, details]) => {
+					if(details.url === line) state[stat] = 1;
+				})
+			);
+		}
 
 		while(rest.length) {
 			const forecast = {};
@@ -201,6 +193,12 @@ export class Charts extends Component {
 		params.shift();
 		params.shift();
 		params.unshift("");
+
+		if(! schema.length) {
+			setTimeout(() => this.setState({}), 1000);
+
+			return null;
+		}
 
 		return (
 			<div className="App">

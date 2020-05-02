@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 
-import { schema, stats } from "./schema";
-import { registerForecastsHandle, tMax, unregisterForecastsHandle } from "./forecasts";
+import { models, schema, stats, tMax } from "./schema";
 
 const dict = {
 	data:    { e: "data", i: "dato" },
@@ -51,6 +50,7 @@ const rgb = {
 	cases:     { r: 0, g: 255, b: 0 },
 	white:     { r: 255, g: 255, b: 255 }
 };
+
 const tip = [
 	["intensive", "#dd0000"],
 	["symptoms", "#ff8000"],
@@ -70,8 +70,6 @@ const records = [
 	["#64320f", ["deceased"]]
 ];
 
-relevant.forEach(stat => (lines[stat] = { f: () => 0 }));
-
 class ToolTip extends Component {
 	constructor() {
 		super();
@@ -79,7 +77,7 @@ class ToolTip extends Component {
 	}
 
 	hide() {
-		this.setState({ day: 0 });
+		this.setState({ day: -1 });
 	}
 
 	render() {
@@ -88,13 +86,13 @@ class ToolTip extends Component {
 		const forecasts = {};
 		const functions = {};
 		const record = {};
-		const date = new Date(2020, 1, 18 + day, 3).toISOString().substr(5, 5);
+		const date = new Date(2020, 1, 24 + day, 3).toISOString().substr(5, 5);
 
 		if(schema[region][0].recordset.cases[day]) Object.keys(lines).forEach(stat => (record[stat] = schema[region][0].recordset[stat][day]));
 
 		relevant.forEach(stat => {
 			if(schema[region][0].recordset[stat][day]) record[stat] = schema[region][0].recordset[stat][day];
-			forecasts[stat] = functions[stat] = Math.floor(lines[stat].f(day));
+			forecasts[stat] = functions[stat] = Math.floor(lines[stat](day));
 			if(stat === "healed") forecasts.healed = forecasts.cases - forecasts.deceased - forecasts.positives;
 			if(stat === "positives") forecasts.positives = forecasts.home + forecasts.hospitalized;
 			if(stat === "hospitalized") forecasts.hospitalized = forecasts.intensive + forecasts.symptoms;
@@ -136,7 +134,7 @@ class ToolTip extends Component {
 	setState(state) {
 		const { day, units, x, y } = state;
 
-		if(day < 6 || units < 0) return super.setState({ display: "none" });
+		if(day < 0 || units < 0) return super.setState({ display: "none" });
 
 		state.display = "table";
 
@@ -164,11 +162,9 @@ export class SurfaceChart extends Component {
 		super(props);
 
 		this.disableTimeout = 0;
-		this.prevProps = {};
 		this.state = {};
 		this.viewportHeight = window.innerHeight;
 		this.viewportWidth = window.innerWidth;
-
 		this.isPortrait = this.viewportHeight > this.viewportWidth;
 
 		this.x2t = () => 0;
@@ -176,45 +172,25 @@ export class SurfaceChart extends Component {
 	}
 
 	componentDidMount() {
-		this.registerHandle();
+		this.refresh();
 		this.handleResize = () => this.resize();
 		window.addEventListener("resize", this.handleResize);
 	}
 
 	componentDidUpdate() {
-		this.registerHandle();
+		this.refresh();
 	}
 
 	componentWillUnmount() {
-		this.unregisterHandle();
 		window.removeEventListener("resize", this.handleResize);
 	}
 
-	registerHandle() {
+	refresh() {
 		const { region } = this.props.parent.state;
-		const prevProps = { region };
 
-		Object.entries(prevProps).forEach(([key, value]) => {
-			if(this.prevProps[key] !== value) {
-				this.unregisterHandle();
-				this.prevProps = prevProps;
-				this.forecastHandle = registerForecastsHandle(region, 0, () => {
-					relevant.forEach(stat => {
-						const { data, model } = schema[region][0].forecasts[stat];
-						const { f } = model;
+		relevant.forEach(stat => (lines[stat] = models[stats[stat].model].f(schema[region][0].forecasts[stat])));
 
-						lines[stat] = { data, f };
-					});
-
-					this.lines = lines;
-					this.setState({}, () => this.resize());
-				});
-			}
-		});
-	}
-
-	unregisterHandle() {
-		if(this.forecastHandle) unregisterForecastsHandle(this.forecastHandle);
+		this.resize();
 	}
 
 	disableTooltip() {
@@ -480,7 +456,7 @@ export class SurfaceChart extends Component {
 	render() {
 		const { language, region } = this.props.parent.state;
 
-		return ! this.lines ? (
+		return ! Object.keys(lines).length ? (
 			<div align="center" className="Error">
 				{dict.error[language]}
 			</div>
@@ -506,6 +482,8 @@ export class SurfaceChart extends Component {
 	}
 
 	resize() {
+		if(! document.getElementById("tip")) return;
+
 		const newViewportHeight = window.innerHeight;
 		const newViewportWidth = window.innerWidth;
 		const rest = document.getElementById("head").clientHeight + document.getElementById("foot").clientHeight + document.getElementById("tip").clientHeight;
@@ -528,9 +506,8 @@ export class SurfaceChart extends Component {
 	}
 
 	draw() {
-		const { canvas, canvasWidth, canvasHeight, imgScale, lines } = this;
+		const { canvas, canvasWidth, canvasHeight, imgScale } = this;
 
-		if(! this.lines) return;
 		if(! this.canvas) return;
 
 		canvas.width = canvasWidth * imgScale;
@@ -542,13 +519,13 @@ export class SurfaceChart extends Component {
 
 		let yMax = 0;
 
-		for(let t = 6; t <= tMax; ++t) {
-			const yc = lines.cases.f(t);
+		for(let t = 0; t <= tMax; ++t) {
+			const yc = lines.cases(t);
 
 			if(yMax < yc) yMax = yc;
 		}
 
-		this.chartXmin = 5.5;
+		this.chartXmin = -0.5;
 		this.chartXmax = tMax + 0.5;
 		this.chartYmin = 0;
 		this.chartYmax = yMax * 1.01;
@@ -596,7 +573,7 @@ export class SurfaceChart extends Component {
 			let sum = 0;
 
 			bands.forEach(stat => {
-				const f = stat === "white" ? 0 : this.lines[stat].f(t);
+				const f = stat === "white" ? 0 : lines[stat](t);
 				const last = stat === "white" ? 0 : y2Img((stat === "cases" ? 0 : sum) + f) * imgWidth * 4;
 				const { r, g, b } = rgb[stat];
 
@@ -635,8 +612,8 @@ export class SurfaceChart extends Component {
 			ctx.lineWidth = 2;
 			ctx.strokeStyle = color;
 			ctx.beginPath();
-			ctx.moveTo(x2Canvas(6), y2Canvas(sum(6)));
-			schema[region][0].recordset.cases.forEach((e, i) => (i > 6 ? ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))) : null));
+			ctx.moveTo(x2Canvas(0), y2Canvas(sum(0)));
+			schema[region][0].recordset.cases.forEach((e, i) => ctx.lineTo(x2Canvas(i), y2Canvas(sum(i))));
 			ctx.stroke();
 		});
 	}
@@ -652,7 +629,7 @@ export class SurfaceChart extends Component {
 
 		this.stepXGrid = stepXGrid;
 
-		for(let t = Math.ceil((viewXmin - 6) / stepXGrid) * stepXGrid + 6; t < viewXmax; t += stepXGrid) {
+		for(let t = Math.ceil(viewXmin / stepXGrid) * stepXGrid; t < viewXmax; t += stepXGrid) {
 			const first = x2Img(t) * 4;
 			const last = imgWidth * imgHeight * 4;
 
@@ -675,7 +652,7 @@ export class SurfaceChart extends Component {
 		ctx.textAlign = "center";
 		ctx.textBaseline = "top";
 
-		for(let t = Math.ceil((viewXmin - 6) / stepXGrid) * stepXGrid + 6; t < viewXmax; t += stepXGrid) ctx.fillText(new Date(2020, 1, 18 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
+		for(let t = Math.ceil(viewXmin / stepXGrid) * stepXGrid; t < viewXmax; t += stepXGrid) ctx.fillText(new Date(2020, 1, 24 + t, 3).toISOString().substr(5, 5), x2Canvas(t), drawHeight + 2);
 	}
 
 	drawYGrid() {
