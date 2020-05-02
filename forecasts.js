@@ -1,6 +1,7 @@
 const { Matrix, inverse } = require("ml-matrix");
 const { parentPort, workerData } = require("worker_threads");
 const { models, stats } = require("./client/src/schema");
+const regression = require("regression");
 
 const { abs } = Math;
 
