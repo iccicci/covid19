@@ -1,8 +1,9 @@
 import React, { Component } from "react";
-import { groups, schema, stats } from "./schema";
 import { LinesChart } from "./Lines";
 import { Option, OptionLink } from "./Option";
 import { SurfaceChart } from "./Surface";
+
+const { groups, schema, stats } = require("./schema");
 
 const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
 

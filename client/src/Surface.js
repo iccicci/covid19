@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 
-import { models, schema, stats, tMax } from "./schema";
+const { models, schema, stats, tMax } = require("./schema");
 
 const dict = {
 	data:    { e: "data", i: "dato" },
