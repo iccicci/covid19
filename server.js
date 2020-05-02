@@ -33,7 +33,7 @@ function daemon(daemonized) {
 		stream.write(toString.apply(null, arguments));
 	};
 
-	process.on("uncaughtException", (err, origin) => log("Caught exception", err));
+	process.on("uncaughtException", err => log("Caught exception", err));
 
 	log("Init");
 
@@ -43,7 +43,7 @@ function daemon(daemonized) {
 
 	app.use(morgan("combined", { stream }));
 	app.use(express.static(path.join(__dirname, "client", "build")));
-	app.get("/data", (req, res) => res.send(data));
+	app.post("/data", (req, res) => res.send(data));
 	app.get("*", (req, res) => res.sendFile(path.join(__dirname, "client", "build", "index.html")));
 
 	const server = app.listen(23000, "localhost", () => process.on("SIGTERM", () => server.close()));

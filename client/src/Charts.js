@@ -1,9 +1,8 @@
 import React, { Component } from "react";
+import { groups, schema, stats } from "./schema";
 import { LinesChart } from "./Lines";
 import { Option, OptionLink } from "./Option";
 import { SurfaceChart } from "./Surface";
-
-const { groups, schema, stats } = require("./schema");
 
 const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
 
@@ -51,7 +50,7 @@ export class Charts extends Component {
 			window.addEventListener("keydown", this.keyEvent);
 		}
 
-		fetch("/data", { accept: "application/json" })
+		fetch("/data", { accept: "application/json", method: "POST" })
 			.then(res => res.json())
 			.then(res => {
 				res.forEach((e, i) => (schema[i] = e));

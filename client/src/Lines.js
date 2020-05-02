@@ -1,7 +1,6 @@
 import React, { Component } from "react";
+import { day2date, groups, models, schema, stats, tMax } from "./schema";
 import { Option } from "./Option";
-
-const { day2date, groups, models, schema, stats, tMax } = require("./schema");
 
 let CanvasJS = require("./canvasjs.min");
 CanvasJS = CanvasJS.Chart ? CanvasJS : window.CanvasJS;
