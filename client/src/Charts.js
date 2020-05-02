@@ -28,83 +28,89 @@ export class Charts extends Component {
 	}
 
 	componentDidMount() {
-		if(false) {
-			let current = -1;
+		const refresh = () => {
+			setTimeout(refresh, 600000);
 
-			this.keyEvent = event => {
-				const { keyCode } = event;
+			fetch("/data", { accept: "application/json", method: "POST" })
+				.then(res => res.json())
+				.then(res => {
+					res.forEach((e, i) => (schema[i] = e));
 
-				let forecast;
+					if(! this.regionOptions) {
+						this.cityOptions = [];
+						this.regionOptions = [];
 
-				if(keyCode === 38) {
-					if(current <= 0) return;
-					forecast = this.checks[--current];
-				} else if(keyCode === 40) {
-					if(current === this.checks.length - 1) return;
-					forecast = this.checks[++current];
-				} else return;
+						schema.forEach((cities, region) => {
+							this.cityOptions[region] = [];
 
-				this.setState({ forecasts: [] }, () => this.setState({ forecasts: [forecast] }));
-			};
+							Object.entries(cities).forEach(([city, set]) => {
+								if(city !== "0") {
+									return this.cityOptions[region].push(
+										<option key={city} value={city}>
+											{set.name}
+										</option>
+									);
+								}
 
-			window.addEventListener("keydown", this.keyEvent);
-		}
+								if(region) {
+									this.cityOptions[region].push(
+										<option key={city} value={city}>
+											-
+										</option>
+									);
+								}
 
-		fetch("/data", { accept: "application/json", method: "POST" })
-			.then(res => res.json())
-			.then(res => {
-				res.forEach((e, i) => (schema[i] = e));
-
-				if(! this.regionOptions) {
-					this.cityOptions = [];
-					this.regionOptions = [];
-
-					schema.forEach((cities, region) => {
-						this.cityOptions[region] = [];
-
-						Object.entries(cities).forEach(([city, set]) => {
-							if(city !== "0") {
-								return this.cityOptions[region].push(
-									<option key={city} value={city}>
+								this.regionOptions.push(
+									<option key={region} value={region}>
 										{set.name}
 									</option>
 								);
-							}
-
-							if(region) {
-								this.cityOptions[region].push(
-									<option key={city} value={city}>
-										-
-									</option>
-								);
-							}
-
-							this.regionOptions.push(
-								<option key={region} value={region}>
-									{set.name}
-								</option>
-							);
+							});
 						});
-					});
 
-					this.regionOptions.sort((a, b) => (a.props.children === "Italia" ? -1 : b.props.children === "Italia" ? 1 : a.props.children < b.props.children ? -1 : 1));
-					this.cityOptions.forEach(cities => cities.sort((a, b) => (a.props.children === "-" ? -1 : b.props.children === "-" ? 1 : a.props.children < b.props.children ? -1 : 1)));
-					this.setState({});
+						this.regionOptions.sort((a, b) => (a.props.children === "Italia" ? -1 : b.props.children === "Italia" ? 1 : a.props.children < b.props.children ? -1 : 1));
+						this.cityOptions.forEach(cities => cities.sort((a, b) => (a.props.children === "-" ? -1 : b.props.children === "-" ? 1 : a.props.children < b.props.children ? -1 : 1)));
+						this.setState({});
 
-					this.checks = [
-						...Object.keys(stats)
-							.filter(stat => stat !== "tests")
-							.reduce((ret, stat) => [...ret, ...schema.map((e, region) => ({ city: 0, region, stat }))], []),
-						...schema
-							.map((cities, region) =>
-								Object.keys(cities)
-									.filter(city => city !== "0")
-									.map(city => ({ city, region, stat: "cases" }))
-							)
-							.reduce((res, e) => [...res, ...e], [])
-					];
-				}
-			});
+						this.checks = [
+							...Object.keys(stats)
+								.filter(stat => stat !== "tests")
+								.reduce((ret, stat) => [...ret, ...schema.map((e, region) => ({ city: 0, region, stat }))], []),
+							...schema
+								.map((cities, region) =>
+									Object.keys(cities)
+										.filter(city => city !== "0")
+										.map(city => ({ city, region, stat: "cases" }))
+								)
+								.reduce((res, e) => [...res, ...e], [])
+						];
+
+						if(false) {
+							let current = -1;
+
+							this.keyEvent = event => {
+								const { keyCode } = event;
+
+								let forecast;
+
+								if(keyCode === 38) {
+									if(current <= 0) return;
+									forecast = this.checks[--current];
+								} else if(keyCode === 40) {
+									if(current === this.checks.length - 1) return;
+									forecast = this.checks[++current];
+								} else return;
+
+								this.setState({ forecasts: [] }, () => this.setState({ forecasts: [forecast] }));
+							};
+
+							window.addEventListener("keydown", this.keyEvent);
+						}
+					}
+				});
+		};
+
+		refresh();
 	}
 
 	componentWillUnmount() {
