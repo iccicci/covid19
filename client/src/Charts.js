@@ -107,6 +107,8 @@ export class Charts extends Component {
 							window.addEventListener("keydown", this.keyEvent);
 						}
 					}
+
+					this.setState({});
 				});
 		};
 

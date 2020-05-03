@@ -40,7 +40,7 @@ class Forecast extends Component {
 
 		const f = models[stats[stat2].model].f(schema[region][city].forecasts[stat2]);
 
-		for(let t = 0; t < tMax; ++t) dataPoints.push({ x: day2date[t], y: f(t) - (stat === stat2 ? 0 : f(t - 1)) });
+		for(let t = 0; t < tMax; ++t) dataPoints.push({ x: day2date[t], y: Math.round(f(t) - (stat === stat2 ? 0 : f(t - 1))) });
 
 		const options = {
 			axisX,

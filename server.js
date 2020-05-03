@@ -82,7 +82,7 @@ function refresh() {
 
 	setTimeout(() => refresh(), 600000).unref();
 
-	fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
+	fetch("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
 		.then(res => res.json())
 		.then(res => {
 			const recordset = initRecordset();
@@ -98,7 +98,7 @@ function refresh() {
 				Object.entries(stats).forEach(([stat, details]) => (recordset[stat][day] = e[details.source]));
 			});
 
-			fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-regioni.json")
+			fetch("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-regioni.json")
 				.then(res => res.json())
 				.then(res => {
 					res.forEach(e => {
@@ -113,7 +113,7 @@ function refresh() {
 						Object.entries(stats).forEach(([stat, details]) => (built[region][0].recordset[stat][day] = e[details.source]));
 					});
 
-					fetch("https://raw.githack.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json")
+					fetch("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json")
 						.then(res => res.json())
 						.then(res => {
 							res.forEach(e => {
@@ -126,9 +126,7 @@ function refresh() {
 								built[region][city].recordset.cases[day] = e[stats.cases.source];
 							});
 
-							built.forEach((cities, region) => (schema[region] = cities));
-
-							const worker = new Worker("./forecasts.js", { workerData: schema });
+							const worker = new Worker("./forecasts.js", { workerData: built });
 
 							worker.on("message", result => {
 								if(result.schema) return fs.writeFile("data.json", JSON.stringify((data = result.schema)), () => {});
