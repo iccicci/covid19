@@ -108,6 +108,8 @@ export class Charts extends Component {
 						}
 					}
 
+					res.forEach((e, i) => (schema[i] = e));
+
 					this.setState({});
 				});
 		};

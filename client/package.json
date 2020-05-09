@@ -4,7 +4,6 @@
 	"private": false,
 	"dependencies": {
 		"math-erf": "1.0.0",
-		"ml-matrix": "6.4.1",
 		"owen-s-t-function": "1.0.0",
 		"react": "16.13.1",
 		"react-dom": "16.13.1",
@@ -15,7 +14,7 @@
 	"proxy": "http://localhost:23000/",
 	"repository": "https://github.com/iccicci/covid19.git",
 	"scripts": {
-		"start": "react-scripts start",
+		"start": "DANGEROUSLY_DISABLE_HOST_CHECK=true react-scripts start",
 		"build": "react-scripts build",
 		"test": "react-scripts test",
 		"eject": "react-scripts eject"

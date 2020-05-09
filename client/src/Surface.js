@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import { models, schema, stats, tMax } from "./schema";
+import { BaseToolTip, mobile } from "./BaseToolTip";
 
 const dict = {
 	data:    { e: "data", i: "dato" },
@@ -39,7 +40,6 @@ const bands = ["deceased", "intensive", "symptoms", "home", "cases", "white"];
 const drawXOffset = 50;
 const drawYOffset = 20;
 const lines = {};
-const mobile = typeof window.orientation !== "undefined" || navigator.userAgent.indexOf("IEMobile") !== -1;
 const relevant = ["home", "cases", "deceased", "intensive", "symptoms", "hospitalized", "positives", "healed"];
 const rgb = {
 	deceased:  { r: 200, g: 100, b: 30 },
@@ -69,16 +69,7 @@ const records = [
 	["#64320f", ["deceased"]]
 ];
 
-class ToolTip extends Component {
-	constructor() {
-		super();
-		this.state = { day: 0, display: "none", left: "0px", top: "0px" };
-	}
-
-	hide() {
-		this.setState({ day: -1 });
-	}
-
+class ToolTip extends BaseToolTip {
 	render() {
 		const { language, region } = this.props;
 		const { day, display, left, units, top } = this.state;
@@ -130,12 +121,8 @@ class ToolTip extends Component {
 		);
 	}
 
-	setState(state) {
-		const { day, units, x, y } = state;
-
-		if(day < 0 || units < 0) return super.setState({ display: "none" });
-
-		state.display = "table";
+	subSetState(state) {
+		const { x, y } = state;
 
 		const distance = mobile ? 50 : 5;
 		const sizeX = 193 + distance;
@@ -151,8 +138,6 @@ class ToolTip extends Component {
 			state.left = x + (x > sizeX ? -sizeX : distance) + "px";
 			state.top = "0px";
 		}
-
-		super.setState(state);
 	}
 }
 
@@ -656,7 +641,7 @@ export class SurfaceChart extends Component {
 	}
 
 	drawYGrid() {
-		const { ctx, drawHeight, img, imgHeight, imgWidth, view2ImgYScale, viewYmax, viewYmin, y2Canvas } = this;
+		const { drawHeight, img, imgHeight, imgWidth, view2ImgYScale, viewYmax, viewYmin } = this;
 		const y2Img = y => imgHeight - Math.floor((y - viewYmin) * view2ImgYScale) - 1;
 
 		let next = true;
@@ -696,8 +681,6 @@ export class SurfaceChart extends Component {
 				img.data[i + 2] = 64;
 				img.data[i + 3] = 255;
 			}
-
-			ctx.fillText(units, drawXOffset - 2, y2Canvas(units));
 		}
 	}
 

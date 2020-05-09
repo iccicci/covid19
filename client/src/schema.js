@@ -59,7 +59,6 @@ export const models = {
 };
 
 export const date2day = {};
-export const day2date = [];
 export const schema = [];
 export const tMax = 120;
 
@@ -72,5 +71,4 @@ for(let i = 0; i < 300; ++i) {
 	let day = `${date.getFullYear()}-${format(date.getMonth() + 1)}-${format(date.getDate())}`;
 
 	date2day[day] = i;
-	day2date[i] = date;
 }
