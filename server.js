@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const dc = require("daemon-control");
 const express = require("express");
 const fetch = require("node-fetch");
@@ -77,17 +78,24 @@ function initRecordset() {
 	return recordset;
 }
 
+let prevHash;
+
 function refresh() {
 	const built = [];
+
+	let thisHash;
 
 	setTimeout(() => refresh(), 600000).unref();
 
 	fetch("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
-		.then(res => res.json())
-		.then(res => {
+		.then(res => res.text())
+		.then(text => {
+			const hash = crypto.createHash("sha256");
 			const recordset = initRecordset();
+			const res = JSON.parse(text);
 
-			if(res.length === recordsNumber) return;
+			hash.update(text);
+			thisHash = hash.digest("hex");
 
 			recordsNumber = res.length;
 			built[0] = { 0: { forecasts: {}, name: "Italia", recordset } };
@@ -99,8 +107,14 @@ function refresh() {
 			});
 
 			fetch("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-regioni.json")
-				.then(res => res.json())
-				.then(res => {
+				.then(res => res.text())
+				.then(text => {
+					const hash = crypto.createHash("sha256");
+					const res = JSON.parse(text);
+
+					hash.update(thisHash + text);
+					thisHash = hash.digest("hex");
+
 					res.forEach(e => {
 						const { day, name, region } = fromSource(e);
 
@@ -114,8 +128,14 @@ function refresh() {
 					});
 
 					fetch("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json")
-						.then(res => res.json())
-						.then(res => {
+						.then(res => res.text())
+						.then(text => {
+							const hash = crypto.createHash("sha256");
+							const res = JSON.parse(text);
+
+							hash.update(thisHash + text);
+							thisHash = hash.digest("hex");
+
 							res.forEach(e => {
 								if(! e.sigla_provincia) return;
 
@@ -125,6 +145,10 @@ function refresh() {
 
 								built[region][city].recordset.cases[day] = e[stats.cases.source];
 							});
+
+							if(thisHash === prevHash) return;
+
+							prevHash = thisHash;
 
 							const worker = new Worker("./forecasts.js", { workerData: built });
 
