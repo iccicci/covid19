@@ -65,7 +65,7 @@ function fromSource(source) {
 	const city = codice_provincia;
 	const day = date2day[data.substr(0, 10)];
 	const name = codice_provincia ? `${denominazione_provincia} (${sigla_provincia})` : denominazione_regione;
-	const region = denominazione_regione === "P.A. Bolzano" ? 21 : codice_regione;
+	const region = denominazione_regione === "P.A. Trento" ? 4 : codice_regione;
 
 	return { city, day, name, region };
 }
