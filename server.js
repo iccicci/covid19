@@ -12,13 +12,12 @@ const { date2day, schema, stats } = require("./client/src/schema");
 
 let data = {};
 let log = () => {};
-let recordsNumber = 0;
+let prevHash;
 
 fs.readFile("data.json", (err, content) => {
 	if(err) return;
 
-	data = JSON.parse(content);
-	recordsNumber = data[0][0].recordset.cases.length;
+	({ data, prevHash } = JSON.parse(content));
 });
 
 function daemon(daemonized) {
@@ -78,8 +77,6 @@ function initRecordset() {
 	return recordset;
 }
 
-let prevHash;
-
 function refresh() {
 	const built = [];
 
@@ -96,8 +93,6 @@ function refresh() {
 
 			hash.update(text);
 			thisHash = hash.digest("hex");
-
-			recordsNumber = res.length;
 			built[0] = { 0: { forecasts: {}, name: "Italia", recordset } };
 
 			res.forEach(e => {
@@ -153,7 +148,9 @@ function refresh() {
 							const worker = new Worker("./forecasts.js", { workerData: built });
 
 							worker.on("message", result => {
-								if(result.schema) return fs.writeFile("data.json", JSON.stringify((data = result.schema)), () => {});
+								data = result.schema;
+
+								if(result.schema) return fs.writeFile("data.json", JSON.stringify({ data, prevHash }), () => {});
 
 								log(result);
 							});

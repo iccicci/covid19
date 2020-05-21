@@ -9,7 +9,7 @@ const { abs } = Math;
 
 const exit = {};
 const infinite = 1e60;
-const rounds = 21000;
+const rounds = 30000;
 const schema = workerData;
 
 function guessBetaPDF(data) {
@@ -150,7 +150,7 @@ function distributions(data, stat, region, city) {
 		prevSr2 = bestSr2;
 	}
 
-	parentPort.postMessage({ error: "too many steps", region, city, stat, s });
+	parentPort.postMessage({ error: "too many steps", region, city, stat });
 	return beta;
 }
 

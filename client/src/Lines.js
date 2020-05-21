@@ -67,7 +67,7 @@ class ToolTip extends BaseToolTip {
 		const { id } = this.props;
 		const elem = document.getElementById("t" + id);
 
-		Object.entries(tips).forEach(([key, value]) => key === id ? null : value.hide());
+		Object.entries(tips).forEach(([key, value]) => (key === id ? null : value.hide()));
 
 		if(elem && ! this.sizeY) this.sizeY = elem.getBoundingClientRect().height;
 
@@ -267,6 +267,10 @@ class Chart extends Component {
 
 		for(let units = Math.floor(chartYmin / stepYGrid) * stepYGrid; units < chartYmax; units += stepYGrid) ctx.fillText(units, drawXOffset - 2, y2y(units));
 
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(0, canvasHeight - drawYOffset, canvasWidth, drawYOffset);
+
+		ctx.fillStyle = "#000000";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "top";
 
