@@ -45,7 +45,7 @@ function daemon(daemonized) {
 
 	app.use(morgan("combined", { stream }));
 	app.use(express.static(path.join(__dirname, "client", "build")));
-	app.post("/data", (req, res) => res.send(data));
+	app.all("/data", (req, res) => res.json(data));
 	app.get("*", (req, res) => res.sendFile(path.join(__dirname, "client", "build", "index.html")));
 
 	const server = app.listen(23000, "localhost", () => process.on("SIGTERM", () => server.close()));
