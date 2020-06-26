@@ -154,22 +154,24 @@ function distributions(data, stat, region, city) {
 	return beta;
 }
 
-schema.forEach((data, region) =>
-	Object.entries(data).forEach(([city, data]) =>
-		Object.entries(data.recordset)
-			.filter(([stat]) => stats[stat].model)
-			.forEach(([stat, data]) => {
-				const begin = new Date().getTime();
+try {
+	schema.forEach((data, region) =>
+		Object.entries(data).forEach(([city, data]) =>
+			Object.entries(data.recordset)
+				.filter(([stat]) => stats[stat].model)
+				.forEach(([stat, data]) => {
+					const begin = new Date().getTime();
 
-				schema[region][city].forecasts[stat] = distributions(
-					data.map((e, i) => [i, e]),
-					stat,
-					region,
-					city
-				);
-				parentPort.postMessage({ region, city, stat, time: new Date().getTime() - begin });
-			})
-	)
-);
+					schema[region][city].forecasts[stat] = distributions(
+						data.map((e, i) => [i, e]),
+						stat,
+						region,
+						city
+					);
+					parentPort.postMessage({ region, city, stat, time: new Date().getTime() - begin });
+				})
+		)
+	);
+} catch(e) {}
 
 parentPort.postMessage({ schema });
