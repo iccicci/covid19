@@ -8,12 +8,12 @@ const dict = {
 	desktop: {
 		e: (
 			<span>
-				horizontal zoom: <b>wheel</b> - vertical zoom: <b>&lt;SHIFT> + wheel</b>
+				horizontal zoom: <b>wheel</b> - vertical zoom: <b>&lt;SHIFT&gt; + wheel</b>
 			</span>
 		),
 		i: (
 			<span>
-				zoom orizzontale: <b>rotella</b> - zoom verticale: <b>&lt;SHIFT> + rotella</b>
+				zoom orizzontale: <b>rotella</b> - zoom verticale: <b>&lt;SHIFT&gt; + rotella</b>
 			</span>
 		)
 	},

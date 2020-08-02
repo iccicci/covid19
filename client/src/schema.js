@@ -60,7 +60,7 @@ export const models = {
 
 export const date2day = {};
 export const schema = [];
-export const tMax = 150;
+export const tMax = 200;
 
 function format(n) {
 	return n > 9 ? n : "0" + n;
