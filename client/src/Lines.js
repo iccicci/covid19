@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import { groups, models, schema, stats, tMax } from "./schema";
 import { BaseToolTip, mobile } from "./BaseToolTip";
 import { Option } from "./Option";
+import { distributions } from "./forecasts";
 
 const drawXOffset = 50;
 const drawYOffset = 20;
@@ -334,9 +335,30 @@ class Forecast extends Component {
 
 		for(let t = 0; t < tMax; ++t) points.push(Math.round(f(t) - (stat === stat2 ? 0 : f(t - 1))));
 
+		let pb = [];
+		let pd = [];
+
+		if(this.state && this.state.dev) {
+			const fb = models[stats[stat2].model].f(this.state.dev);
+			const fp = models[stats[stat2].model].f(distributions(
+				schema[region][city].recordset[stat].map((e, i) => [i, e]),
+				stat,
+				region,
+				city,
+				data => console.log(data),
+				this.state.dev
+			));
+
+			for(let t = 0; t < tMax; ++t) {
+				pb.push(Math.round(fb(t) - (stat === stat2 ? 0 : fb(t - 1))));
+				pd.push(Math.round(fp(t) - (stat === stat2 ? 0 : fb(t - 1))));
+			}
+		}
+
 		this.chart.setLines([
 			{ color: stat === "deceased" ? "#808080" : "#000000", legend: dict.forecast[language], points },
-			{ color: stats[stat].color, legend: stats[stat].legend[language], points: schema[region][city].recordset[stat] }
+			{ color: stats[stat].color, legend: stats[stat].legend[language], points: schema[region][city].recordset[stat] },
+			...(this.state && this.state.dev ? [{ color: "#a0a0a0", legend: "beta0", points: pb }, { color: "#c0c0c0", legend: "dev", points: pd }] : [])
 		]);
 		this.chart.setState({});
 	}
@@ -387,6 +409,11 @@ class Forecast extends Component {
 				</p>
 				<Chart id={"f" + i} language={language} parent={this} ref={ref => (this.chart = ref)} title={schema[region][city].name} />
 				<Option enabled={true} desc={dict.remove[language]} onClick={remove} />
+				{true ? <>
+					<br/>
+					<input id="dev" type="text" size="160" defaultValue={schema[region][city].forecasts[stat].join(" ")} onKeyPress={e => { if(e.key === "Enter") this.setState({ dev: document.getElementById("dev").value.split(" ").map(e => parseInt(e, 10)) }); }} />
+					<button onClick={() => this.setState({ dev: document.getElementById("dev").value.split(" ").map(e => parseInt(e, 10)) })}>go</button>
+				</> : null}
 			</div>
 		);
 	}

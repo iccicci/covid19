@@ -8,7 +8,7 @@ const path = require("path");
 const { Worker } = require("worker_threads");
 // eslint-disable-next-line no-native-reassign
 require = require("esm")(module);
-const { date2day, schema, stats } = require("./client/src/schema");
+const { date2day, stats } = require("./client/src/schema");
 
 let data = {};
 let log = () => {};
@@ -141,6 +141,8 @@ function refresh() {
 								built[region][city].recordset.cases[day] = e[stats.cases.source];
 							});
 
+							data.forEach((e, i) => Object.entries(e).forEach(([k, v]) => built[i][k].forecasts = v.forecasts));
+
 							if(thisHash === prevHash) return;
 
 							prevHash = thisHash;
@@ -150,7 +152,7 @@ function refresh() {
 							worker.on("message", result => {
 								data = result.schema;
 
-								if(result.schema) return fs.writeFile("data.json", JSON.stringify({ data, prevHash }), () => {});
+								if(result.schema) return fs.writeFile("data.json", JSON.stringify({ data, prevHash }, null, 1), () => {});
 
 								log(result);
 							});

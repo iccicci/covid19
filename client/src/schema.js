@@ -51,16 +51,16 @@ export const groups = {
 
 export const models = {
 	normal: {
-		f: ([a, b, c, d]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2))
+		f: ([a, b, c, d, e, f, g, h]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2)) + e * exp(-((t - f) ** 2) / (2 * g ** 2)) * (1 + erf((h * (t - f)) / g / SQRT2))
 	},
 	integral: {
-		f: ([a, b, c, d]) => t => a * ((1 + erf((t - b) / c / SQRT2)) / 2 - 2 * T((t - b) / c, d))
+		f: ([a, b, c, d, e, f, g, h]) => t => a * ((1 + erf((t - b) / c / SQRT2)) / 2 - 2 * T((t - b) / c, d)) + e * ((1 + erf((t - f) / g / SQRT2)) / 2 - 2 * T((t - f) / g, h))
 	}
 };
 
 export const date2day = {};
 export const schema = [];
-export const tMax = 200;
+export const tMax = 300;
 
 function format(n) {
 	return n > 9 ? n : "0" + n;
