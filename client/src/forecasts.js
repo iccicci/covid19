@@ -6,7 +6,7 @@ const { abs } = Math;
 
 const exit = {};
 const infinite = 1e60;
-const rounds = 100;
+const rounds = 1000;
 
 function guessBetaPDF(data) {
 	let yMax = 0;
