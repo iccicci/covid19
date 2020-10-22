@@ -141,7 +141,7 @@ function refresh() {
 								built[region][city].recordset.cases[day] = e[stats.cases.source];
 							});
 
-							data.forEach((e, i) => Object.entries(e).forEach(([k, v]) => built[i][k].forecasts = v.forecasts));
+							data.forEach((e, i) => Object.entries(e).forEach(([k, v]) => (built[i][k].forecasts = v.forecasts)));
 
 							if(thisHash === prevHash) return;
 
@@ -150,9 +150,11 @@ function refresh() {
 							const worker = new Worker("./forecasts.js", { workerData: built });
 
 							worker.on("message", result => {
-								data = result.schema;
+								if(result.schema) {
+									data = result.schema;
 
-								if(result.schema) return fs.writeFile("data.json", JSON.stringify({ data, prevHash }, null, 1), () => {});
+									return fs.writeFile("data.json", stringify({ data, prevHash }, 0), () => {});
+								}
 
 								log(result);
 							});
@@ -162,6 +164,78 @@ function refresh() {
 				.catch(e => log("Fetching regions", e));
 		})
 		.catch(e => log("Fetching Italy", e));
+}
+
+function stringify(obj, step) {
+	let arr = [];
+	let str = [];
+
+	switch(step) {
+	case 0:
+		arr = ["{", stringify(obj.data, 1), ` "prevHash": "${obj.prevHash}"`, "}", ""];
+		break;
+	case 1:
+		arr = [" \"data\": [", obj.map(e => stringify(e, 2)).join(",\n"), " ],"];
+		break;
+	case 2:
+		arr = [
+			"  {",
+			Object.entries(obj)
+				.sort(([k1], [k2]) => (parseInt(k1, 10) < parseInt(k2, 10) ? -1 : 1))
+				.map(([k, v]) => stringify({ k, v }, 3))
+				.join(",\n"),
+			"  }"
+		];
+		break;
+	case 3:
+		arr = [
+			`   "${obj.k}": {`,
+			"    \"forecasts\": {",
+			Object.entries(obj.v.forecasts)
+				.sort(([k1], [k2]) => (k1 < k2 ? -1 : 1))
+				.map(([k, v]) => stringify({ k, v }, 4))
+				.join(",\n"),
+			"    },",
+			`    "name": "${obj.v.name}",`,
+			"    \"recordset\": {",
+			Object.entries(obj.v.recordset)
+				.sort(([k1], [k2]) => (k1 < k2 ? -1 : 1))
+				.map(([k, v]) => stringify({ k, v }, 5))
+				.join(",\n"),
+			"    }",
+			"   }"
+		];
+		break;
+	case 4:
+		arr = [
+			`     "${obj.k}": [`,
+			obj.v
+				.map(e => {
+					if(e >= 10000) return e.toFixed(0);
+					if(e >= 1000) return e.toFixed(1);
+					if(e >= 100) return e.toFixed(2);
+					if(e >= 10) return e.toFixed(3);
+					if(e >= 1) return e.toFixed(4);
+					return e.toFixed(5);
+				})
+				.map(e => "      " + e)
+				.join(",\n"),
+			"     ]"
+		];
+		break;
+	case 5:
+		obj.v.forEach((e, i) => {
+			if(i % 15) str.push(e);
+			else {
+				if(i) arr.push(str.join(","));
+				str = [`      ${e}`];
+			}
+		});
+		arr.push(str.join(","));
+		arr = [`     "${obj.k}": [`, arr.join(",\n"), "     ]"];
+	}
+
+	return arr.join("\n");
 }
 
 function toString() {
