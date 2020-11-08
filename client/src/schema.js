@@ -51,7 +51,8 @@ export const groups = {
 
 export const models = {
 	normal: {
-		f: ([a, b, c, d, e, f, g, h]) => t => a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2)) + e * exp(-((t - f) ** 2) / (2 * g ** 2)) * (1 + erf((h * (t - f)) / g / SQRT2))
+		f: ([a, b, c, d, e, f, g, h]) => t =>
+			a * exp(-((t - b) ** 2) / (2 * c ** 2)) * (1 + erf((d * (t - b)) / c / SQRT2)) + e * exp(-((t - f) ** 2) / (2 * g ** 2)) * (1 + erf((h * (t - f)) / g / SQRT2))
 	},
 	integral: {
 		f: ([a, b, c, d, e, f, g, h]) => t => a * ((1 + erf((t - b) / c / SQRT2)) / 2 - 2 * T((t - b) / c, d)) + e * ((1 + erf((t - f) / g / SQRT2)) / 2 - 2 * T((t - f) / g, h))
@@ -72,3 +73,30 @@ for(let i = 0; i < 300; ++i) {
 
 	date2day[day] = i;
 }
+
+export const dpcm = {
+	0:   true,
+	6:   true,
+	9:   true,
+	13:  true,
+	14:  true,
+	16:  true,
+	23:  true,
+	27:  true,
+	33:  true,
+	37:  true,
+	40:  true,
+	46:  true,
+	62:  true,
+	78:  true,
+	83:  true,
+	84:  true,
+	108: true,
+	141: true,
+	165: true,
+	196: true,
+	232: true,
+	237: true,
+	243: true,
+	253: true
+};

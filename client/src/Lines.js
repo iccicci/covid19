@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { groups, models, schema, stats, tMax } from "./schema";
+import { dpcm, groups, models, schema, stats, tMax } from "./schema";
 import { BaseToolTip, mobile } from "./BaseToolTip";
 import { Option } from "./Option";
 import { distributions } from "./forecasts";
@@ -117,6 +117,17 @@ class Chart extends Component {
 			ctx.moveTo(t2x(t), 0);
 			ctx.lineTo(t2x(t), canvasHeight - drawYOffset);
 			ctx.stroke();
+		}
+
+		ctx.strokeStyle = "#ff8080";
+
+		for(let t = Math.ceil(chartXmin); t < chartXmax; t++) {
+			if(dpcm[t]) {
+				ctx.beginPath();
+				ctx.moveTo(t2x(t + 0.5), 0);
+				ctx.lineTo(t2x(t + 0.5), canvasHeight - drawYOffset);
+				ctx.stroke();
+			}
 		}
 
 		return stepXGrid;

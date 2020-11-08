@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { models, schema, stats, tMax } from "./schema";
+import { dpcm, models, schema, stats, tMax } from "./schema";
 import { BaseToolTip, mobile } from "./BaseToolTip";
 
 const dict = {
@@ -623,6 +623,20 @@ export class SurfaceChart extends Component {
 				img.data[i + 1] = 64;
 				img.data[i + 2] = 64;
 				img.data[i + 3] = 255;
+			}
+		}
+
+		for(let t = Math.ceil(viewXmin); t < viewXmax; t++) {
+			if(dpcm[t]) {
+				const first = x2Img(t + 0.5) * 4;
+				const last = imgWidth * imgHeight * 4;
+
+				for(let i = first; i < last; i += step) {
+					img.data[i] = 255;
+					img.data[i + 1] = 64;
+					img.data[i + 2] = 64;
+					img.data[i + 3] = 255;
+				}
 			}
 		}
 	}
