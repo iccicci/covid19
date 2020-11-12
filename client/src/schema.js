@@ -61,13 +61,13 @@ export const models = {
 
 export const date2day = {};
 export const schema = [];
-export const tMax = 300;
+export const tMax = 310;
 
 function format(n) {
 	return n > 9 ? n : "0" + n;
 }
 
-for(let i = 0; i < 300; ++i) {
+for(let i = 0; i < tMax; ++i) {
 	let date = new Date(2020, 1, 24 + i, 0, 1);
 	let day = `${date.getFullYear()}-${format(date.getMonth() + 1)}-${format(date.getDate())}`;
 

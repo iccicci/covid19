@@ -37,6 +37,7 @@ const dict = {
 };
 
 const bands = ["deceased", "intensive", "symptoms", "home", "cases", "white"];
+const bandsReal = ["deceased", "intensive", "symptoms", "white"];
 const drawXOffset = 50;
 const drawYOffset = 20;
 const lines = {};
@@ -61,6 +62,13 @@ const tip = [
 	["cases", "#000000"]
 ];
 
+const tipReal = [
+	["intensive", "#dd0000"],
+	["symptoms", "#ff8000"],
+	["hospitalized", "#000000"],
+	["deceased", "#c8641e"]
+];
+
 const records = [
 	["#00c000", ["deceased", "intensive", "symptoms", "home", "healed"]],
 	["#c0c000", ["deceased", "intensive", "symptoms", "home"]],
@@ -69,10 +77,17 @@ const records = [
 	["#64320f", ["deceased"]]
 ];
 
+const recordsReal = [
+	["#c06000", ["deceased", "intensive", "symptoms"]],
+	["#c00000", ["deceased", "intensive"]],
+	["#64320f", ["deceased"]]
+];
+
 class ToolTip extends BaseToolTip {
 	render() {
-		const { language, region } = this.props;
+		const { language, parent, region } = this.props;
 		const { day, display, left, units, top } = this.state;
+		const { real } = parent.props.parent.state;
 		const forecasts = {};
 		const functions = {};
 		const record = {};
@@ -105,7 +120,7 @@ class ToolTip extends BaseToolTip {
 					<div className="TCellL">{dict.data[language]}:</div>
 					<div className="TCellR">{dict[record.cases ? "record" : "forecast"][language]}</div>
 				</div>
-				{tip.map(([stat, color]) => (
+				{(real ? tipReal : tip).map(([stat, color]) => (
 					<div className="TRow" key={stat}>
 						<div className="TCellL">
 							<span style={{ color }}>{stats[stat].legend[language]}</span>:
@@ -505,7 +520,7 @@ export class SurfaceChart extends Component {
 		let yMax = 0;
 
 		for(let t = 0; t <= tMax; ++t) {
-			const yc = lines.cases(t);
+			const yc = this.props.parent.state.real ? lines.deceased(t) + lines.intensive(t) + lines.symptoms(t) : lines.cases(t);
 
 			if(yMax < yc) yMax = yc;
 		}
@@ -557,7 +572,7 @@ export class SurfaceChart extends Component {
 			let y = (i + imgWidth * (imgHeight - 1)) * 4;
 			let sum = 0;
 
-			bands.forEach(stat => {
+			(this.props.parent.state.real ? bandsReal : bands).forEach(stat => {
 				const f = stat === "white" ? 0 : lines[stat](t);
 				const last = stat === "white" ? 0 : y2Img((stat === "cases" ? 0 : sum) + f) * imgWidth * 4;
 				const { r, g, b } = rgb[stat];
@@ -589,9 +604,9 @@ export class SurfaceChart extends Component {
 
 	drawRecords() {
 		const { ctx, x2Canvas, y2Canvas } = this;
-		const { region } = this.props.parent.state;
+		const { real, region } = this.props.parent.state;
 
-		records.forEach(([color, adds]) => {
+		(real ? recordsReal : records).forEach(([color, adds]) => {
 			const sum = day => adds.reduce((tot, stat) => tot + schema[region][0].recordset[stat][day], 0);
 
 			ctx.lineWidth = 2;

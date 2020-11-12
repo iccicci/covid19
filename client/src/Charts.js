@@ -10,12 +10,15 @@ const dict = {
 	by:       { e: "by", i: "a cura di" },
 	chart:    { e: "chart", i: "grafico" },
 	city:     { e: "city", i: "provincia" },
+	complete: { e: "complete", i: "completo" },
 	code:     { e: "source code and issue report on", i: "codice sorgente e segnalazione errori su" },
 	language: { e: "language", i: "lingua" },
 	lines:    { e: "lines", i: "linee" },
 	region:   { e: "region", i: "regione" },
+	reliable: { e: "reliable", i: "affidabile" },
 	source:   { e: "data source", i: "fonte dati" },
-	surface:  { e: "surface", i: "area" }
+	surface:  { e: "surface", i: "area" },
+	type:     { e: "type", i: "tipo" }
 };
 
 export class Charts extends Component {
@@ -84,28 +87,6 @@ export class Charts extends Component {
 								)
 								.reduce((res, e) => [...res, ...e], [])
 						];
-
-						if(false) {
-							let current = -1;
-
-							this.keyEvent = event => {
-								const { keyCode } = event;
-
-								let forecast;
-
-								if(keyCode === 38) {
-									if(current <= 0) return;
-									forecast = this.checks[--current];
-								} else if(keyCode === 40) {
-									if(current === this.checks.length - 1) return;
-									forecast = this.checks[++current];
-								} else return;
-
-								this.setState({ forecasts: [] }, () => this.setState({ forecasts: [forecast] }));
-							};
-
-							window.addEventListener("keydown", this.keyEvent);
-						}
 					}
 
 					res.forEach((e, i) => (schema[i] = e));
@@ -138,11 +119,13 @@ export class Charts extends Component {
 
 		if(lines) {
 			Object.keys(stats).forEach(stat => (state[stat] = 0));
-			lines.split("").forEach(line =>
+			lines.split("").forEach(line => {
+				if(line === "z") return (state.real = 1);
+
 				Object.entries(stats).forEach(([stat, details]) => {
 					if(details.url === line) state[stat] = 1;
-				})
-			);
+				});
+			});
 		}
 
 		while(rest.length) {
@@ -174,10 +157,11 @@ export class Charts extends Component {
 		if(! state) state = this.state; //remove with hash
 
 		const { city, forecasts, language, region, view } = state;
-		const lines = Object.entries(stats)
-			.filter(([stat]) => state[stat])
-			.map(([, details]) => details.url)
-			.join("");
+		const lines =
+			Object.entries(stats)
+				.filter(([stat]) => state[stat])
+				.map(([, details]) => details.url)
+				.join("") + (state.real ? "z" : "");
 
 		const rest = forecasts ? forecasts.map(forecast => `/${forecast.region}/${forecast.city || stats[forecast.stat || "cases"].url}`).join("") : "";
 
@@ -185,7 +169,7 @@ export class Charts extends Component {
 	}
 
 	render() {
-		const { city, language, region, view } = this.state;
+		const { city, language, real, region, view } = this.state;
 		const urlParams = this.getUrlParamsFromState();
 		const params = urlParams.split("/");
 
@@ -217,6 +201,13 @@ export class Charts extends Component {
 					{" - " + dict.chart[language] + ": "}
 					<Option enabled={view !== "andamento"} desc={dict.lines[language]} onClick={() => exitFullscreen(() => this.setState({ view: "proiezioni" }))} />
 					<Option enabled={view === "andamento"} desc={dict.surface[language]} onClick={() => requestFullscreen(() => this.setState({ view: "andamento" }))} />
+					{view === "andamento" ? (
+						<>
+							{" - " + dict.type[language] + ": "}
+							<Option enabled={! real} desc={dict.complete[language]} onClick={() => this.setState({ real: 0 })} />
+							<Option enabled={real} desc={dict.reliable[language]} onClick={() => this.setState({ real: 1 })} />
+						</>
+					) : null}
 					{" - " + dict.language[language] + ": "}
 					<Option enabled={language === "e"} desc="english" onClick={() => this.setState({ language: "e" })} />
 					<Option enabled={language === "i"} desc="italiano" onClick={() => this.setState({ language: "i" })} />

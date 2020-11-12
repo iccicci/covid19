@@ -376,6 +376,7 @@ class Forecast extends Component {
 				? [
 					{ color: "#b0b0b0", legend: "beta0", points: pb },
 					{ color: "#404040", legend: "dev", points: pd }
+					// eslint-disable-next-line no-mixed-spaces-and-tabs
 				  ]
 				: [])
 		]);
