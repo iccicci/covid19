@@ -117,7 +117,7 @@ export function distributions(data, stat, region, city, cb, init) {
 
 		// eslint-disable-next-line no-loop-func
 		[false, true].forEach(diagonal =>
-			[0, 0.1, 0.2, 0.3, 0.5, 0.7, 1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100].forEach(lambda => {
+			[0, 0.1, 0.2, 0.3, 0.5, 0.7, 1, 2, 3, 5, 7, 10, 20, 30, 50, 70, 100, 200, 300, 500, 700, 1000, 2000, 3000, 5000, 7000, 10000, 20000, 30000, 50000, 70000, 100000].forEach(lambda => {
 				try {
 					const LevenbergMarquardt = Matrix.add(JrT_Jr, Matrix.mul(diagonal ? D : I, lambda));
 					const nextBeta = Matrix.sub(Beta, inverse(LevenbergMarquardt).mmul(JrT_r)).data.map(e => e[0]);

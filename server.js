@@ -82,7 +82,7 @@ function refresh() {
 
 	let thisHash;
 
-	setTimeout(() => refresh(), 600000).unref();
+	setTimeout(() => refresh(), 1200000).unref();
 
 	fetch("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
 		.then(res => res.text())
