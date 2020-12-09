@@ -22,7 +22,10 @@ try {
 						data => parentPort.postMessage(data),
 						schema[region][city].forecasts[stat]
 					);
-					parentPort.postMessage({ region, city, stat, time: new Date().getTime() - begin });
+					parentPort.postMessage({ region, city, name: schema[region][city].name, stat, time: new Date().getTime() - begin });
+					if(Math.abs(schema[region][city].forecasts[stat][7]) - 250 > 200) parentPort.postMessage({ data: "strange b", name: schema[region][city].name });
+					if(Math.abs(schema[region][city].forecasts[stat][7]) > 10000) parentPort.postMessage({ data: "really strange d", name: schema[region][city].name });
+					else if(Math.abs(schema[region][city].forecasts[stat][7]) > 100) parentPort.postMessage({ data: "strange d", name: schema[region][city].name });
 				})
 		)
 	);

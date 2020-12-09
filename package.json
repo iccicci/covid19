@@ -17,22 +17,22 @@
 	"devDependencies": {
 		"babel-eslint": "10.1.0",
 		"concurrently": "5.3.0",
-		"eslint": "6.8.0",
-		"eslint-plugin-flowtype": "4.7.0",
-		"eslint-plugin-import": "2.20.2",
-		"eslint-plugin-jsx-a11y": "6.2.3",
-		"eslint-plugin-react": "7.19.0",
-		"eslint-plugin-react-hooks": "4.0.0",
-		"nodemon": "2.0.5",
-		"prettier": "2.1.2",
-		"react": "16.14.0"
+		"eslint": "6.6.0",
+		"eslint-plugin-flowtype": "5.2.0",
+		"eslint-plugin-import": "2.22.1",
+		"eslint-plugin-jsx-a11y": "6.4.1",
+		"eslint-plugin-react": "7.21.5",
+		"eslint-plugin-react-hooks": "4.2.0",
+		"nodemon": "2.0.6",
+		"prettier": "2.2.1",
+		"react": "17.0.1"
 	},
 	"licence": "MIT",
 	"repository": "https://github.com/iccicci/covid19.git",
 	"scripts": {
 		"client": "cd client && npm start",
 		"dep": "echo server ; npm outdated ; cd client ; echo client ; npm outdated",
-		"server": "./node_modules/.bin/nodemon -r esm server.js nodaemon",
+		"server": "./node_modules/.bin/nodemon --delay 2 -r esm server.js nodaemon",
 		"start": "concurrently \"npm run server\" \"npm run client\""
 	},
 	"eslintConfig": {
