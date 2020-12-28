@@ -61,7 +61,7 @@ export const models = {
 
 export const date2day = {};
 export const schema = [];
-export const tMax = 310;
+export const tMax = 340;
 
 function format(n) {
 	return n > 9 ? n : "0" + n;
@@ -98,5 +98,7 @@ export const dpcm = {
 	232: true,
 	237: true,
 	243: true,
-	253: true
+	253: true,
+	282: true,
+	297: true
 };
