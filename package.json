@@ -5,7 +5,7 @@
 	"dependencies": {
 		"daemon-control": "0.1.5",
 		"esm": "3.2.25",
-		"express": "4.17.1",
+		"express": "4.18.2",
 		"math-erf": "1.0.0",
 		"ml-matrix": "6.5.3",
 		"morgan": "1.10.0",
